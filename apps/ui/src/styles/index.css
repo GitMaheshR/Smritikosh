@@ -1,0 +1,45 @@
+@import './tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { font-size: 100%; }
+  body { @apply bg-bg text-text font-sans text-body; -webkit-tap-highlight-color: transparent; }
+  *:focus-visible { outline: 2px solid rgb(var(--c-accent)); outline-offset: 2px; }
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  button { @apply min-h-touch; }
+}
+
+@layer components {
+  .sheet-enter { animation: sheet-in var(--motion) ease-out; }
+}
+
+@keyframes sheet-in {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* Rendered markdown (notes, lessons). Tokens only. */
+.md { word-wrap: break-word; }
+.md > * + * { margin-top: var(--s-3); }
+.md h1 { font-size: var(--fs-title); line-height: var(--lh-title); font-weight: 600; }
+.md h2 { font-size: var(--fs-heading); line-height: var(--lh-heading); font-weight: 600; }
+.md h3, .md h4 { font-weight: 600; }
+.md ul { list-style: disc; padding-left: var(--s-6); }
+.md ol { list-style: decimal; padding-left: var(--s-6); }
+.md blockquote { border-left: 3px solid rgb(var(--c-border)); padding-left: var(--s-3); color: rgb(var(--c-text-muted)); }
+.md a { text-decoration: underline; color: rgb(var(--c-accent)); }
+.md hr { border-color: rgb(var(--c-border)); }
+.md code { font-family: var(--font-mono); font-size: 0.9em; background: rgb(var(--c-surface-2)); padding: 0.1em 0.35em; border-radius: 6px; }
+.md pre { background: rgb(var(--c-surface-2)); border: 1px solid rgb(var(--c-border)); border-radius: var(--r-control); padding: var(--s-3); overflow-x: auto; }
+.md pre code { background: none; padding: 0; font-size: var(--fs-mono); line-height: var(--lh-mono); }
+.md table { border-collapse: collapse; display: block; overflow-x: auto; }
+.md th, .md td { border: 1px solid rgb(var(--c-border)); padding: var(--s-1) var(--s-3); text-align: left; }
+.md img { max-width: 100%; }
+.md-reading { font-family: var(--font-serif); font-size: 1.0625rem; line-height: 1.75rem; max-width: 68ch; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-built_in { color: rgb(var(--c-m-notes)); }
+.hljs-string, .hljs-attr, .hljs-regexp { color: rgb(var(--c-success)); }
+.hljs-number, .hljs-symbol, .hljs-meta { color: rgb(var(--c-warning)); }
+.hljs-title, .hljs-section, .hljs-name, .hljs-type { color: rgb(var(--c-m-stocks)); }
+.hljs-comment, .hljs-quote { color: rgb(var(--c-text-muted)); font-style: italic; }

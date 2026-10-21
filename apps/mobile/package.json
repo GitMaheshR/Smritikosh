@@ -1,0 +1,21 @@
+{
+  "name": "@smritikosh/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "sync": "pnpm --filter @smritikosh/ui build && cap sync android",
+    "apk": "pnpm sync && cd android && gradlew.bat assembleDebug",
+    "typecheck": "echo ok"
+  },
+  "dependencies": {
+    "@capacitor-community/sqlite": "^6.0.2",
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/filesystem": "^6.0.1",
+    "@capacitor/local-notifications": "^6.1.0",
+    "@capacitor/preferences": "^6.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

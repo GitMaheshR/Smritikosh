@@ -1,0 +1,9 @@
+{
+  "appId": "app.smritikosh.mobile",
+  "appName": "Smritikosh",
+  "webDir": "../ui/dist",
+  "android": { "allowMixedContent": false },
+  "plugins": {
+    "CapacitorSQLite": { "androidIsEncryption": false }
+  }
+}

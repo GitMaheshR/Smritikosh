@@ -1,0 +1,16 @@
+{
+  "name": "smritikosh",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.34.7",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r --if-present test",
+    "dev:ui": "pnpm --filter @smritikosh/ui dev",
+    "build:ui": "pnpm --filter @smritikosh/ui build",
+    "dev:desktop": "pnpm --filter @smritikosh/desktop dev",
+    "dist:desktop": "pnpm --filter @smritikosh/desktop dist",
+    "sync:mobile": "pnpm --filter @smritikosh/mobile sync",
+    "apk:debug": "pnpm --filter @smritikosh/mobile apk"
+  }
+}

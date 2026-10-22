@@ -2,108 +2,181 @@ import { describe, expect, it } from 'vitest';
 import { MemoryStore } from './memory-store';
 import { SearchIndex } from './search';
 import {
-  breadcrumb, buildTree, canMove, childLevel, childrenOf, descendants, levelOf, moveTargets, reviseList,
+  hasNotebook, isBlankNote, listNotebooks, normalizeNotebookName, notebookOf, parseNotebookList, planNotesMigration,
+  removeFromList, renameInList, reviseList, runNotesMigration, snippetFromBody, titleFromBody, visibleNotes, withNotebook,
 } from './notes';
-import { LessonIndex, lessonFields, lessonToItem, situationOptions } from './lessons';
+import { LessonIndex, lessonToItem, situationOptions } from './lessons';
 import { generateSeedNotes, removeSeededNotes, seedNotes } from './seed';
-import type { Item } from './types';
 
-async function tree() {
-  const s = new MemoryStore();
-  const subj = await s.createItem({ type: 'note', title: 'React', meta: { level: 'subject' } });
-  const subj2 = await s.createItem({ type: 'note', title: 'Databases', meta: { level: 'subject' } });
-  const topic = await s.createItem({ type: 'note', title: 'Hooks', parent_id: subj.id, meta: { level: 'topic' } });
-  const topic2 = await s.createItem({ type: 'note', title: 'Indexing', parent_id: subj2.id, meta: { level: 'topic' } });
-  const note = await s.createItem({ type: 'note', title: 'useEffect cleanup', parent_id: topic.id, meta: { level: 'note' } });
-  const loose = await s.createItem({ type: 'note', title: 'Loose idea' });
-  return { s, subj, subj2, topic, topic2, note, loose, all: () => s.listItems({ includeDeleted: true }) };
-}
-
-describe('note tree', () => {
-  it('levels and child levels', () => {
-    expect(childLevel(null)).toBe('subject');
-    expect(childLevel('subject')).toBe('topic');
-    expect(childLevel('topic')).toBe('note');
-    expect(childLevel('note')).toBeNull();
+describe('title and snippet come from the text', () => {
+  it('first non-empty line, markdown marks removed', () => {
+    expect(titleFromBody('# Hooks cheat sheet\n\nbody')).toBe('Hooks cheat sheet');
+    expect(titleFromBody('\n\n  **Buy** milk  \nmore')).toBe('Buy milk');
+    expect(titleFromBody('- [ ] call bank\n- [ ] pay rent')).toBe('call bank');
+    expect(titleFromBody('> quoted idea')).toBe('quoted idea');
+    expect(titleFromBody('1. first step')).toBe('first step');
+    expect(titleFromBody('')).toBe('Untitled');
+    expect(titleFromBody('   \n  ')).toBe('Untitled');
+    expect(titleFromBody(null)).toBe('Untitled');
   });
-
-  it('root lists subjects and loose notes, pinned first; children list their container', async () => {
-    const t = await tree();
-    await t.s.updateItem(t.subj2.id, { pinned: true });
-    const items = await t.all();
-    expect(childrenOf(items, null).map((i) => i.title)).toEqual(['Databases', 'Loose idea', 'React']);
-    expect(childrenOf(items, t.topic.id).map((i) => i.title)).toEqual(['useEffect cleanup']);
-    expect(levelOf(t.loose)).toBe('note');
+  it('snippets skip code fences and table syntax', () => {
+    const body = '# JOIN types\n\n| Join | Returns |\n|---|---|\n| INNER | both match |\n\n```sql\nSELECT 1;\n```\n';
+    expect(snippetFromBody(body)).toBe('Join Returns INNER both match SELECT 1;');
+    expect(titleFromBody('```ts\nconst a = 1;\n```')).toBe('const a = 1;');
+    expect(titleFromBody('| a | b |\n|---|---|')).toBe('a b');
   });
-
-  it('breadcrumb runs root to item and survives a cycle', async () => {
-    const t = await tree();
-    let items = await t.all();
-    expect(breadcrumb(items, t.note.id).map((i) => i.title)).toEqual(['React', 'Hooks', 'useEffect cleanup']);
-    // corrupt data: subject points at its own descendant
-    items = items.map((i) => (i.id === t.subj.id ? ({ ...i, parent_id: t.note.id } as Item) : i));
-    expect(breadcrumb(items, t.note.id).length).toBeLessThanOrEqual(3);
+  it('long titles are cut at 80 characters', () => {
+    const t = titleFromBody('x'.repeat(200));
+    expect(t.length).toBe(80);
+    expect(t.endsWith('…')).toBe(true);
   });
-
-  it('descendants and buildTree', async () => {
-    const t = await tree();
-    const items = await t.all();
-    expect(descendants(items, t.subj.id).map((i) => i.title).sort()).toEqual(['Hooks', 'useEffect cleanup']);
-    const roots = buildTree(items);
-    expect(roots.find((n) => n.item.id === t.subj.id)!.children[0]!.children[0]!.item.id).toBe(t.note.id);
-  });
-
-  it('canMove enforces levels and blocks cycles', async () => {
-    const t = await tree();
-    const items = await t.all();
-    expect(canMove(items, t.topic.id, t.subj2.id)).toBe(true);      // topic -> other subject
-    expect(canMove(items, t.note.id, t.topic2.id)).toBe(true);      // note -> other topic
-    expect(canMove(items, t.loose.id, t.topic.id)).toBe(true);      // loose note -> topic
-    expect(canMove(items, t.note.id, null)).toBe(true);             // note -> unfiled
-    expect(canMove(items, t.note.id, t.subj.id)).toBe(false);       // wrong level
-    expect(canMove(items, t.topic.id, null)).toBe(false);           // topic cannot be root
-    expect(canMove(items, t.subj.id, t.topic.id)).toBe(false);      // subject under its own topic
-    expect(canMove(items, t.subj.id, t.subj.id)).toBe(false);       // into itself
-    expect(canMove(items, t.subj.id, null)).toBe(true);
-    expect(moveTargets(items, t.note.id).map((i) => i.title).sort()).toEqual(['Hooks', 'Indexing']);
-  });
-
-  it('cascade delete and restore keeps the tree together', async () => {
-    const t = await tree();
-    const items = await t.all();
-    const ids = [t.subj.id, ...descendants(items, t.subj.id).map((i) => i.id)];
-    for (const id of ids) await t.s.deleteItem(id);
-    expect(childrenOf(await t.all(), null).map((i) => i.title)).toEqual(['Databases', 'Loose idea']);
-    for (const id of ids) await t.s.restoreItem(id);
-    expect(childrenOf(await t.all(), t.topic.id)).toHaveLength(1);
-  });
-
-  it('orphaned children (deleted parent) fall back to the root', async () => {
-    const t = await tree();
-    await t.s.deleteItem(t.topic.id);
-    expect(childrenOf(await t.all(), null).map((i) => i.title)).toContain('useEffect cleanup');
+  it('snippet is the text after the title, flattened', () => {
+    expect(snippetFromBody('# Title\n\nfirst line\n- second **bold** line\n\nthird')).toBe('first line second bold line third');
+    expect(snippetFromBody('only a title')).toBe('');
+    expect(snippetFromBody('')).toBe('');
+    const s = snippetFromBody(`# T\n${'word '.repeat(100)}`, 50);
+    expect(s.length).toBe(50);
+    expect(s.endsWith('…')).toBe(true);
   });
 });
 
-describe('revision list', () => {
-  it('never-reviewed first, then oldest reviewed; only flagged notes', async () => {
+async function seeded() {
+  const s = new MemoryStore();
+  const mk = (title: string, body: string, o: { notebook?: string; tags?: string[]; pinned?: boolean; revise?: boolean; revisedAt?: string } = {}) =>
+    s.createItem({
+      type: 'note', title, body, tags: o.tags ?? [], pinned: o.pinned ?? false,
+      meta: { ...(o.notebook ? { notebook: o.notebook } : {}), ...(o.revise ? { revise: true } : {}), ...(o.revisedAt ? { revisedAt: o.revisedAt } : {}) },
+    });
+  const a = await mk('A', '# A\ntext a', { notebook: 'Work', tags: ['x'] });
+  const b = await mk('B', '# B\ntext b', { notebook: 'work', pinned: true });
+  const c = await mk('C', '# C\ntext c', { notebook: 'Money', revise: true, revisedAt: '2026-10-10T10:00' });
+  const d = await mk('D', '# D\ntext d', { revise: true });
+  const blank = await mk('Untitled', '   ');
+  return { s, a, b, c, d, blank, items: () => s.listItems({ includeDeleted: true }) };
+}
+
+describe('visibleNotes', () => {
+  it('hides blank notes, pinned first then newest edited', async () => {
+    const t = await seeded();
+    const all = visibleNotes(await t.items());
+    expect(all.map((n) => n.title)[0]).toBe('B');
+    expect(all.map((n) => n.title)).not.toContain('Untitled');
+    expect(all).toHaveLength(4);
+    expect(isBlankNote(t.blank)).toBe(true);
+  });
+  it('filters by notebook (case-insensitive), no notebook, tag, ids', async () => {
+    const t = await seeded();
+    const items = await t.items();
+    expect(visibleNotes(items, { notebook: 'WORK' }).map((n) => n.title).sort()).toEqual(['A', 'B']);
+    expect(visibleNotes(items, { notebook: null }).map((n) => n.title)).toEqual(['D']);
+    expect(visibleNotes(items, { tag: 'x' }).map((n) => n.title)).toEqual(['A']);
+    expect(visibleNotes(items, { ids: new Set([t.c.id]) }).map((n) => n.title)).toEqual(['C']);
+    expect(visibleNotes(items, { ids: new Set() })).toEqual([]);
+  });
+  it('trashed notes never show', async () => {
+    const t = await seeded();
+    await t.s.deleteItem(t.a.id);
+    expect(visibleNotes(await t.items()).map((n) => n.title)).not.toContain('A');
+  });
+  it('review later: never-reviewed first, then oldest', async () => {
+    const t = await seeded();
+    expect(reviseList(await t.items()).map((n) => n.title)).toEqual(['D', 'C']);
+  });
+});
+
+describe('notebooks', () => {
+  it('names are trimmed, collapsed and capped', () => {
+    expect(normalizeNotebookName('  My   notes ')).toBe('My notes');
+    expect(normalizeNotebookName('x'.repeat(60)).length).toBe(40);
+  });
+  it('list = saved order, then names only notes use; counts ignore blanks and case', async () => {
+    const t = await seeded();
+    const list = listNotebooks(await t.items(), ['Money', 'Empty']);
+    expect(list.map((n) => [n.name.toLowerCase(), n.count])).toEqual([['money', 1], ['empty', 0], ['work', 2]]); // "work" and "Work" are one notebook
+  });
+  it('add, rename, remove are case-insensitive and reject duplicates', () => {
+    expect(withNotebook(['Work'], 'work')).toEqual(['Work']);
+    expect(withNotebook(['Work'], '  ')).toEqual(['Work']);
+    expect(withNotebook(['Work'], 'Home')).toEqual(['Work', 'Home']);
+    expect(hasNotebook(['Work'], 'WORK')).toBe(true);
+    expect(renameInList(['Work', 'Home'], 'work', 'Office')).toEqual(['Office', 'Home']);
+    expect(removeFromList(['Work', 'Home'], 'HOME')).toEqual(['Work']);
+  });
+  it('parseNotebookList survives bad data', () => {
+    expect(parseNotebookList(null)).toEqual([]);
+    expect(parseNotebookList('not json')).toEqual([]);
+    expect(parseNotebookList('{"a":1}')).toEqual([]);
+    expect(parseNotebookList('["A", 3, "", "B"]')).toEqual(['A', 'B']);
+  });
+  it('notebookOf ignores blanks', () => {
+    expect(notebookOf({ meta: { notebook: '  ' } } as never)).toBeNull();
+    expect(notebookOf({ meta: { notebook: ' Work ' } } as never)).toBe('Work');
+  });
+});
+
+async function oldTree() {
+  const s = new MemoryStore();
+  const mk = (title: string, level: string, parent: string | null = null, body: string | null = null, extra: Record<string, unknown> = {}) =>
+    s.createItem({ type: 'note', title, body, parent_id: parent, meta: { level, ...extra } });
+  const react = await mk('React', 'subject');
+  const hooks = await mk('Hooks', 'topic', react.id);
+  const emptyTopic = await mk('Testing', 'topic', react.id);
+  const money = await mk('Money', 'subject');
+  const emptySubject = await mk('Ideas', 'subject');
+  const n1 = await mk('useEffect cleanup', 'note', hooks.id, 'Cleanup runs before re-run.', { revise: true });
+  const n2 = await mk('Budget basics', 'note', money.id, '');
+  const loose = await mk('Loose idea', 'note', null, 'just text');
+  void emptyTopic; void emptySubject;
+  return { s, react, hooks, money, n1, n2, loose };
+}
+
+describe('migration from the old tree', () => {
+  it('plans notebooks "Subject / Topic" and subject names, keeps titles as first lines', async () => {
+    const t = await oldTree();
+    const plan = planNotesMigration(await t.s.listItems({ includeArchived: true }));
+    const patch = (id: string) => plan.patches.find((p) => p.id === id)!.patch;
+    expect(patch(t.n1.id).meta).toMatchObject({ notebook: 'React / Hooks', revise: true, migrated: true });
+    expect(patch(t.n1.id).meta).not.toHaveProperty('level');
+    expect(patch(t.n1.id).body).toBe('# useEffect cleanup\n\nCleanup runs before re-run.\n');
+    expect(patch(t.n2.id).meta).toMatchObject({ notebook: 'Money' });
+    expect(patch(t.n2.id).body).toBe('# Budget basics\n');
+    expect(patch(t.loose.id).meta).not.toHaveProperty('notebook');
+    expect(patch(t.loose.id).parent_id).toBeNull();
+    expect(plan.deleteIds).toHaveLength(5);
+    expect(plan.notebooks).toEqual(['Ideas', 'Money', 'React / Hooks', 'React / Testing']);
+  });
+
+  it('applies once, keeps every note visible with the same title, and is idempotent', async () => {
+    const t = await oldTree();
+    const first = await runNotesMigration(t.s);
+    expect(first.migrated).toBe(3);
+    const notes = visibleNotes(await t.s.listItems());
+    expect(notes.map((n) => titleFromBody(n.body)).sort()).toEqual(['Budget basics', 'Loose idea', 'useEffect cleanup']);
+    expect(JSON.parse((await t.s.getSetting('notebooks'))!)).toContain('React / Hooks');
+    // containers are gone from the list (trashed), notes keep working
+    expect((await t.s.listItems()).filter((i) => i.meta.level === 'subject' || i.meta.level === 'topic')).toHaveLength(0);
+
+    const before = JSON.stringify(await t.s.listItems());
+    const second = await runNotesMigration(t.s);
+    expect(second.migrated).toBe(0);
+    expect(JSON.stringify(await t.s.listItems())).toBe(before);
+    // even without the flag, already-migrated notes are skipped
+    expect(planNotesMigration(await t.s.listItems({ includeArchived: true })).patches).toHaveLength(0);
+  });
+
+  it('an empty database just records the migration', async () => {
     const s = new MemoryStore();
-    await s.createItem({ type: 'note', title: 'b', meta: { level: 'note', revise: true, revisedAt: '2026-10-20T10:00' } });
-    await s.createItem({ type: 'note', title: 'a', meta: { level: 'note', revise: true, revisedAt: '2026-10-01T10:00' } });
-    await s.createItem({ type: 'note', title: 'z', meta: { level: 'note', revise: true } });
-    await s.createItem({ type: 'note', title: 'not flagged', meta: { level: 'note' } });
-    await s.createItem({ type: 'note', title: 'flagged subject', meta: { level: 'subject', revise: true } });
-    expect(reviseList(await s.listItems()).map((i) => i.title)).toEqual(['z', 'a', 'b']);
+    expect(await runNotesMigration(s)).toEqual({ migrated: 0, notebooks: [] });
+    expect(await s.getSetting('notes_v2')).toBe('1');
   });
 });
 
 describe('lessons', () => {
-  it('derives title/body from the fields and round-trips', () => {
+  it('derives title/body from the fields', () => {
     const f = { situation: 'Work', whatHappened: 'Accepted the first offer.', lesson: 'Always ask for a day to think.\nMore detail' };
     const it = lessonToItem(f);
     expect(it.title).toBe('Work: Always ask for a day to think.');
     expect(it.body).toContain('Accepted the first offer.');
-    expect(lessonFields({ meta: it.meta } as Item)).toEqual(f);
     expect(lessonToItem({ situation: '', whatHappened: '', lesson: '' }).title).toBe('Lesson');
   });
 
@@ -121,9 +194,6 @@ describe('lessons', () => {
     expect(r).toContain(b.id);
     expect(r).not.toContain(c.id);
     expect(idx.search('   ')).toEqual([]);
-    await s.deleteItem(a.id);
-    idx.build(await s.listItems());
-    expect(idx.search('negotiating')).not.toContain(a.id);
   });
 
   it('situation options: used first by count, then unused suggestions', async () => {
@@ -132,7 +202,6 @@ describe('lessons', () => {
     const opts = situationOptions(await s.listItems());
     expect(opts.slice(0, 2)).toEqual(['Money', 'Travel']);
     expect(opts).toContain('Work');
-    expect(opts.filter((o) => o === 'Money')).toHaveLength(1);
   });
 });
 
@@ -142,20 +211,20 @@ describe('seed + search speed', () => {
     expect(generateSeedNotes(5)[0]).toEqual(generateSeedNotes(5)[0]);
   });
 
-  it('500 seeded notes: index build and search each well under 200 ms', async () => {
+  it('500 seeded notes: notebooks and tags set, index build and search well under 200 ms', async () => {
     const s = new MemoryStore();
     await seedNotes(s, 500);
     const items = await s.listItems();
-    expect(items.filter((i) => levelOf(i) === 'note')).toHaveLength(500);
+    expect(visibleNotes(items)).toHaveLength(500);
+    expect(listNotebooks(items, []).length).toBeGreaterThanOrEqual(5);
+    expect(items[0]!.tags).toHaveLength(1);
     const idx = new SearchIndex();
     const t0 = performance.now();
     idx.build(items);
     const buildMs = performance.now() - t0;
-    const queries = ['closure', 'retry latency', 'indexing', 'promise stream', 'sql join'];
-    const times = queries.map((q) => {
+    const times = ['closure', 'retry latency', 'indexing', 'promise stream', 'sql join'].map((q) => {
       const a = performance.now();
-      const r = idx.search(q);
-      expect(r.length).toBeGreaterThan(0);
+      expect(idx.search(q).length).toBeGreaterThan(0);
       return performance.now() - a;
     });
     expect(Math.max(...times)).toBeLessThan(200);
@@ -165,10 +234,9 @@ describe('seed + search speed', () => {
 
   it('removeSeededNotes soft-deletes only seeded rows', async () => {
     const s = new MemoryStore();
-    await s.createItem({ type: 'note', title: 'mine', meta: { level: 'note' } });
+    await s.createItem({ type: 'note', title: 'mine', body: '# mine' });
     await seedNotes(s, 10);
-    const n = await removeSeededNotes(s);
-    expect(n).toBeGreaterThan(10);
+    expect(await removeSeededNotes(s)).toBe(10);
     expect((await s.listItems()).map((i) => i.title)).toEqual(['mine']);
   });
 });

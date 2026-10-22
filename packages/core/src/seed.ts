@@ -1,5 +1,4 @@
 import type { DataStore } from './datastore';
-import type { Item } from './types';
 
 // Small deterministic PRNG so the seed (and the perf test) is repeatable.
 function rng(seed: number) {
@@ -45,23 +44,15 @@ export function generateSeedNotes(count: number, seed = 42): SeedNote[] {
   });
 }
 
-/** Creates the subject / topic / note tree for generated notes. Every row is flagged meta.seed so it can be removed. */
+/** Creates the generated notes: the subject becomes the notebook, the topic a tag. Every row is flagged meta.seed so it can be removed. */
 export async function seedNotes(store: DataStore, count = 500): Promise<number> {
-  const subjects = new Map<string, Item>();
-  const topics = new Map<string, Item>();
   for (const n of generateSeedNotes(count)) {
-    let s = subjects.get(n.subject);
-    if (!s) {
-      s = await store.createItem({ type: 'note', title: n.subject, meta: { level: 'subject', seed: true } });
-      subjects.set(n.subject, s);
-    }
-    const key = `${n.subject}/${n.topic}`;
-    let t = topics.get(key);
-    if (!t) {
-      t = await store.createItem({ type: 'note', title: n.topic, parent_id: s.id, meta: { level: 'topic', seed: true } });
-      topics.set(key, t);
-    }
-    await store.createItem({ type: 'note', title: n.title, body: n.body, parent_id: t.id, meta: { level: 'note', seed: true } });
+    await store.createItem({
+      type: 'note', title: n.title, body: `# ${n.title}
+
+${n.body}`,
+      tags: [n.topic.toLowerCase().replace(/\s+/g, '-')], meta: { notebook: n.subject, seed: true },
+    });
   }
   return count;
 }

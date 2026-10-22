@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { renderMarkdown } from './markdown';
+import { renderMarkdown, toggleCheckbox } from './markdown';
 
 describe('renderMarkdown', () => {
   it('renders headings, lists, tables, emphasis', () => {
@@ -55,5 +55,53 @@ describe('renderMarkdown', () => {
 
   it('handles empty input', () => {
     expect(renderMarkdown('')).toBe('');
+  });
+
+  it('a single Enter is a line break', () => {
+    expect(renderMarkdown('line one\nline two')).toContain('line one<br>line two');
+  });
+
+  it('renders task lists as tappable boxes numbered in order', () => {
+    const html = renderMarkdown('- [ ] call bank\n- [x] pay rent\n- [ ] book trip');
+    expect(html.match(/class="md-check"/g)).toHaveLength(3);
+    expect(html).toMatch(/aria-checked="false"[^>]*data-check="0"/);
+    expect(html).toMatch(/aria-checked="true"[^>]*data-check="1"/);
+    expect(html).toMatch(/data-check="2"/);
+    expect(html).not.toMatch(/<input/i);
+    // numbering restarts on every render
+    expect(renderMarkdown('- [ ] a')).toMatch(/data-check="0"/);
+  });
+});
+
+describe('toggleCheckbox', () => {
+  const src = '- [ ] one\n- [x] two\n- [ ] three';
+
+  it('flips the nth checkbox either way', () => {
+    expect(toggleCheckbox(src, 0)).toBe('- [x] one\n- [x] two\n- [ ] three');
+    expect(toggleCheckbox(src, 1)).toBe('- [ ] one\n- [ ] two\n- [ ] three');
+    expect(toggleCheckbox(src, 2)).toBe('- [ ] one\n- [x] two\n- [x] three');
+  });
+
+  it('out of range leaves the text alone', () => {
+    expect(toggleCheckbox(src, 9)).toBe(src);
+    expect(toggleCheckbox('no boxes', 0)).toBe('no boxes');
+  });
+
+  it('ignores checkbox-looking lines inside code blocks so numbering matches the rendered boxes', () => {
+    const text = '- [ ] real a\n```\n- [ ] in code\n```\n- [ ] real b';
+    expect(renderMarkdown(text).match(/md-check/g)).toHaveLength(2);
+    expect(toggleCheckbox(text, 1)).toBe('- [ ] real a\n```\n- [ ] in code\n```\n- [x] real b');
+  });
+
+  it('handles numbered lists, nested items and tilde fences', () => {
+    const text = '1. [ ] first\n   - [ ] nested\n~~~\n- [ ] no\n~~~\n2) [x] last';
+    expect(toggleCheckbox(text, 1)).toBe('1. [ ] first\n   - [x] nested\n~~~\n- [ ] no\n~~~\n2) [x] last');
+    expect(toggleCheckbox(text, 2)).toBe('1. [ ] first\n   - [ ] nested\n~~~\n- [ ] no\n~~~\n2) [ ] last');
+  });
+
+  it('keeps the rendered box count and the toggle index in agreement', () => {
+    const text = '- [ ] a\n- [ ] b\n\ntext\n\n- [x] c';
+    expect(renderMarkdown(text).match(/data-check="\d+"/g)).toHaveLength(3);
+    expect(toggleCheckbox(toggleCheckbox(text, 2), 2)).toBe(text);
   });
 });

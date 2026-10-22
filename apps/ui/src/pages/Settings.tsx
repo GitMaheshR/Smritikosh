@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
-import { isValidPin } from '@smritikosh/core';
+import { isValidPin, loadSampleData, removeSampleData } from '@smritikosh/core';
 import { useApp } from '../store/app';
 import { Card, Chip } from '../components/ui';
 import { platformName } from '../platform';
@@ -124,6 +124,41 @@ function NotificationsCard() {
   );
 }
 
+function SampleDataCard() {
+  const { store, refresh, showToast, items } = useApp();
+  const [busy, setBusy] = useState(false);
+  const has = items.some((i) => i.meta.sample === true);
+  async function add() {
+    setBusy(true);
+    try {
+      const r = await loadSampleData(store!);
+      await refresh();
+      showToast(r.tasks + r.notes + r.lessons === 0 ? 'Sample data is already loaded' : `Added ${r.tasks} tasks, ${r.notes} notes, ${r.lessons} lessons`);
+    } finally { setBusy(false); }
+  }
+  async function remove() {
+    if (!window.confirm('Remove all sample tasks, notes and lessons? Your own items are not touched.')) return;
+    setBusy(true);
+    try {
+      const n = await removeSampleData(store!);
+      await refresh();
+      showToast(`Removed ${n} sample items`);
+    } finally { setBusy(false); }
+  }
+  return (
+    <Card title="Sample data">
+      <p className="mb-3 text-meta text-muted">
+        Adds example tasks (overdue, today, repeating, free-time), notes with code and tables, and lessons, so you can try every screen.
+        A few sample tasks have reminders set for the coming days. Remove them any time; your own items stay.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" disabled={busy || has} onClick={() => void add()} className="rounded-control bg-accent px-4 text-body font-semibold text-on-accent disabled:opacity-50">{has ? 'Sample data loaded' : 'Add sample data'}</button>
+        {has && <button type="button" disabled={busy} onClick={() => void remove()} className={btn}>Remove sample data</button>}
+      </div>
+    </Card>
+  );
+}
+
 export function SettingsPage() {
   const { theme, setTheme } = useApp();
   return (
@@ -139,6 +174,7 @@ export function SettingsPage() {
       <ReadingCard />
       <NotificationsCard />
       <PinCard />
+      <SampleDataCard />
       <CategoriesCard />
       <TagsCard />
       <p className="num text-meta text-muted">Smritikosh 0.1.0 · running on {platformName()} · all data stays on this device</p>

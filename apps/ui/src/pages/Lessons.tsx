@@ -93,7 +93,8 @@ export function LessonsPage() {
   const editing = id ? byId.get(id) ?? null : null;
   useEffect(() => { if (id && !byId.has(id) && all.length) nav('/lessons', { replace: true }); }, [id, byId, all.length, nav]);
 
-  const close = () => { setCreating(false); if (id) nav('/lessons'); };
+  // replace, so Back after closing a lesson does not reopen it
+  const close = () => { setCreating(false); if (id) nav('/lessons', { replace: true }); };
 
   return (
     <div className="space-y-4">

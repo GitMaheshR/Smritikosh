@@ -1,6 +1,52 @@
 # Smritikosh — progress
 
+## Notes redesign + Back button (2026-10-22, after Phase 3)
+Notes felt too complex (Subject → Topic → Note, many controls). Replaced with notebooks and tags (plan "B").
+
+### Notes
+- **List:** search box, chips (All, each notebook with count, No notebook, Review later, + Notebook), rows with title,
+  one-line snippet and date, pinned first then most recently edited. Rename / delete a notebook (its notes are kept).
+- **New note** opens a blank page; the first line is the title. A note left blank is discarded (also cleaned at startup).
+- **Editor:** one text box (auto-growing), Read / Edit switch, formatting bar (bold, heading, list, checklist, code) shown
+  in Edit mode, a single Enter is a new line, checklist lines (`- [ ]`) are tappable in Read mode, autosave 600 ms and on
+  leaving. **⋯ menu:** Pin, Review later (+ Mark as reviewed), Notebook (pick or create), Tags, Delete with Undo.
+- **Storage:** same `items` table. Notebook = `meta.notebook`; saved notebook list = setting `notebooks`.
+- **Migration** (`runNotesMigration`, once, flag `notes_v2`): topic → notebook "Subject / Topic", notes directly under a
+  subject use the subject's name, old title becomes the first line (`# Title`), old Subject/Topic rows go to the trash.
+  Idempotent (also skips notes already marked `migrated`).
+- Sample data and the 500-note seed now use notebooks and tags.
+
+### Back button
+- Visible **← Back** on detail screens (an open note or lesson) and, on phones, on modules reached through More.
+- **Android Back / gesture:** closes the open sheet first, else goes back a screen, else leaves the app
+  (`@capacitor/app`). Closing a lesson replaces its history entry so Back does not reopen it.
+- While a note is open on a phone the bottom tab bar is hidden to give the text room.
+
+### Tests / builds
+- 58 core tests (title/snippet, filters, notebooks, migration incl. idempotency, sample data, seed + 500-note search
+  speed) and 15 UI tests (markdown safety, line breaks, checkbox rendering and toggling incl. fenced code). Typecheck,
+  UI build, Windows installer and debug APK all pass.
+- Browser (phone-size): sample data → list and chips, open a note, tap a checkbox, ⋯ menu, Back, New note, type, checklist
+  button, Back → new note listed. Found and fixed: React dev double-mount deleted a fresh blank note.
+- **Phone (Moto G82 5G):** update installed with data kept; the app database was read back off the phone and confirms the
+  migration ran (`notes_v2 = 1`, old containers trashed, notes carry notebooks, e.g. "Tech interviews / React", titles kept).
+  A pre-update backup of the phone database is in the session scratchpad.
+
+### Fix: search box text overlapped the search icon
+The Tailwind spacing scale (`tokens.css` / `tailwind.config.cjs`) had no steps 5, 7, 9, 10, 14, 16 or 24, so classes such
+as `pl-10`, `h-7` (chips), `h-14 w-14` (the + button), `h-5 w-5` (checkboxes) and `pb-24` (space above the bottom bar)
+were silently ignored. Added those steps (all multiples of 4 px). Checked in the browser (search padding 40 px, chips 28 px)
+and on the phone (search icon clear of the text, + button 56 px).
+
+### Not verified
+- **Touch use of the new Notes screen and Android Back on the phone:** seen on the phone by screenshot (Notes list after the
+  migration, search bar), but not tapped through. The phone was locked when the update was first installed.
+- Formatting bar and keyboard interaction on the phone; wide-screen list + editor layout was seen only partly.
+- The Windows installer was built but not run.
+- Enter on a list line does not continue the list yet.
+
 ## Phase 3 — Notes and Lessons (built 2026-10-22)
+*(The Subject / Topic / Note tree described below was replaced by the redesign above.)*
 
 ### Built
 - **core**: note tree helpers (`childrenOf`, `breadcrumb`, `descendants`, `buildTree`, `canMove`, `moveTargets`,
@@ -58,6 +104,13 @@ Debug APK installed over USB and driven with taps.
   to the home screen instead of going to the previous screen.
 - **Not tested on the phone:** search speed with 500 notes (the `#/dev/seed` page has no link and the app has no URL
   bar), Reading mode, Pin / Revise / Move, delete + Undo, "Before you start…" results, reminders from Phase 2.
+
+### Sample data (added after Phase 3)
+Settings → "Sample data" → Add / Remove. Loads 13 tasks (overdue, today, this week, later, no date, repeating,
+free-time with estimates, with checklists, one already done), 13 notes (two subjects, topics, markdown with code and
+tables, 3 flagged for revision, 1 pinned, 1 loose) and 3 lessons. Everything is flagged `meta.sample`; Remove moves only
+those rows to the trash. Three sample tasks have real reminders set for the next days. Code: `packages/core/src/sample.ts`
+(6 tests). Verified in the browser and on the Moto G82 5G (Tasks screen).
 
 ## Phase 2 — Tasks, reminders, dashboard (built 2026-10-22)
 

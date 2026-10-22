@@ -52,8 +52,27 @@ export function EmptyState({ icon: Icon, color, line, action, onAction }: { icon
   );
 }
 
+/** Open sheets, topmost last. The Android Back button closes the topmost one before it navigates anywhere. */
+const overlayStack: (() => void)[] = [];
+export function closeTopOverlay(): boolean {
+  const close = overlayStack.pop();
+  close?.();
+  return !!close;
+}
+
 export function Sheet({ open, onClose, children, label, variant = 'sheet' }: { open: boolean; onClose: () => void; children: ReactNode; label: string; variant?: 'sheet' | 'command' }) {
   const ref = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    if (!open) return;
+    const fn = () => closeRef.current();
+    overlayStack.push(fn);
+    return () => {
+      const i = overlayStack.indexOf(fn);
+      if (i >= 0) overlayStack.splice(i, 1);
+    };
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();

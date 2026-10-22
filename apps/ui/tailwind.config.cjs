@@ -28,8 +28,9 @@ module.exports = {
     },
     borderRadius: { none: '0', card: 'var(--r-card)', control: 'var(--r-control)', full: '9999px' },
     spacing: {
-      0: '0', 1: 'var(--s-1)', 2: 'var(--s-2)', 3: 'var(--s-3)', 4: 'var(--s-4)', 6: 'var(--s-6)',
-      8: 'var(--s-8)', 12: 'var(--s-12)', touch: 'var(--touch)', sidebar: 'var(--sidebar-w)', 'sidebar-sm': 'var(--sidebar-w-sm)',
+      0: '0', 1: 'var(--s-1)', 2: 'var(--s-2)', 3: 'var(--s-3)', 4: 'var(--s-4)', 5: 'var(--s-5)', 6: 'var(--s-6)',
+      7: 'var(--s-7)', 8: 'var(--s-8)', 9: 'var(--s-9)', 10: 'var(--s-10)', 12: 'var(--s-12)', 14: 'var(--s-14)',
+      16: 'var(--s-16)', 24: 'var(--s-24)', touch: 'var(--touch)', sidebar: 'var(--sidebar-w)', 'sidebar-sm': 'var(--sidebar-w-sm)',
       content: 'var(--content-w)', 'page-x': 'var(--page-x)',
     },
     boxShadow: { float: 'var(--shadow-float)', none: 'none' },

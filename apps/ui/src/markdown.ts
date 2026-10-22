@@ -29,10 +29,16 @@ const ALIASES: Record<string, string> = { js: 'javascript', ts: 'typescript', sh
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+// Numbered per render so a click can be mapped back to the nth task line in the source text.
+let checkIndex = 0;
+
 const marked = new Marked({
   gfm: true,
-  breaks: false,
+  breaks: true, // a single Enter is a new line, as people expect when typing notes
   renderer: {
+    checkbox({ checked }) {
+      return `<span class="md-check" role="checkbox" tabindex="0" aria-checked="${checked ? 'true' : 'false'}" data-check="${checkIndex++}"></span>`;
+    },
     code({ text, lang }) {
       const raw = (lang ?? '').trim().split(/\s+/)[0]?.toLowerCase() ?? '';
       const l = ALIASES[raw] ?? raw;
@@ -44,7 +50,7 @@ const marked = new Marked({
   },
 });
 
-// Notes are untrusted text. This is an offline app, so links are inert: shown as underlined text, never navigated.
+// Notes are untrusted text. This is an offline app, so links are inert: shown underlined, never navigated.
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   if (node.tagName === 'A') {
     node.removeAttribute('href');
@@ -58,10 +64,41 @@ DOMPurify.addHook('afterSanitizeAttributes', (node) => {
 
 /** Markdown → sanitised HTML string, safe for dangerouslySetInnerHTML. */
 export function renderMarkdown(source: string): string {
+  checkIndex = 0;
   const html = marked.parse(source ?? '', { async: false }) as string;
   return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
     FORBID_TAGS: ['style', 'form', 'input', 'button', 'iframe', 'object', 'embed', 'svg', 'math'],
     FORBID_ATTR: ['style', 'srcset'],
+    ADD_ATTR: ['data-check', 'role', 'tabindex', 'aria-checked'],
   });
+}
+
+const TASK_LINE = /^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+)\[( |x|X)\]/;
+const FENCE = /^\s*(```|~~~)/;
+
+/**
+ * Flips the nth checkbox (`- [ ]` / `- [x]`) in the note text, skipping fenced code blocks. Returns the new text,
+ * or the original text if there is no such checkbox.
+ */
+export function toggleCheckbox(source: string, index: number): string {
+  const lines = source.split('\n');
+  let n = 0;
+  let fence: string | null = null;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const f = FENCE.exec(line);
+    if (f) {
+      fence = fence === null ? f[1]! : fence === f[1] ? null : fence;
+      continue;
+    }
+    if (fence) continue;
+    const m = TASK_LINE.exec(line);
+    if (!m) continue;
+    if (n++ === index) {
+      lines[i] = line.replace(TASK_LINE, `$1[${m[2] === ' ' ? 'x' : ' '}]`);
+      return lines.join('\n');
+    }
+  }
+  return source;
 }

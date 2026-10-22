@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Grid2x2, Plus, Search } from 'lucide-react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Grid2x2, Plus, Search } from 'lucide-react';
 import { useApp } from '../store/app';
 import { MODULES } from '../modules';
 import { QuickAdd, SearchBar } from './Overlays';
@@ -9,12 +9,27 @@ import { ReminderPrompt, ToastHost } from './Feedback';
 import { TaskEditor } from './TaskEditor';
 
 const BOTTOM = ['home', 'tasks', 'notes'];
+const TAB_PATHS = ['/', '/tasks', '/notes'];
+
+/** Steps back in the app's own history; falls back to Home when there is nothing to go back to. */
+export function useGoBack() {
+  const nav = useNavigate();
+  return () => ((window.history.state as { idx?: number } | null)?.idx ? nav(-1) : nav('/'));
+}
 
 export function Shell() {
   const { openQuickAdd, openSearch, lock } = useApp();
   const [more, setMore] = useState(false);
   const loc = useLocation();
+  const goBack = useGoBack();
   useEffect(() => setMore(false), [loc.pathname]);
+
+  // Back arrow: on detail screens (a note, a lesson) everywhere; on the modules reached through "More" on phones.
+  const hasHistory = !!(window.history.state as { idx?: number } | null)?.idx;
+  const nested = /^\/(notes|lessons)\/./.test(loc.pathname) || loc.pathname.startsWith('/dev');
+  const showBack = hasHistory && (nested || !TAB_PATHS.includes(loc.pathname));
+  // An open note uses the whole phone screen: no bottom bar.
+  const inNote = /^\/notes\/./.test(loc.pathname);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -52,8 +67,14 @@ export function Shell() {
       </aside>
 
       <div className="min-w-0 flex-1">
-        <div className="mx-auto w-full max-w-content px-page-x pb-24 pt-4 md:pb-8">
+        <div className={`mx-auto w-full max-w-content px-page-x pt-4 md:pb-8 ${inNote ? 'pb-8' : 'pb-24'}`}>
           <div className="mb-4 flex items-center justify-end gap-2">
+            {showBack && (
+              <button type="button" onClick={goBack} aria-label="Back"
+                className={`mr-auto flex min-h-touch items-center gap-2 rounded-control px-3 text-body text-text hover:bg-surface-2 ${nested ? '' : 'md:hidden'}`}>
+                <ArrowLeft size={20} aria-hidden />Back
+              </button>
+            )}
             <button type="button" onClick={() => openSearch(true)} aria-label="Search"
               className="flex min-h-touch items-center gap-2 rounded-control bg-surface-2 px-3 text-meta text-muted md:min-w-[220px]">
               <Search size={18} /><span className="hidden md:inline">Search</span><kbd className="num ml-auto hidden md:inline">Ctrl K</kbd>
@@ -67,7 +88,7 @@ export function Shell() {
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-center border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Primary">
+      {!inNote && <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-center border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Primary">
         {MODULES.filter((m) => BOTTOM.slice(0, 2).includes(m.key)).map((m) => (
           <NavLink key={m.key} to={m.path} end={m.path === '/'} className="flex min-h-touch flex-col items-center justify-center text-meta text-muted aria-[current=page]:text-accent">
             <m.icon size={22} aria-hidden />{m.label}
@@ -85,7 +106,7 @@ export function Shell() {
         <button type="button" onClick={() => setMore(true)} className="flex min-h-touch flex-col items-center justify-center text-meta text-muted">
           <Grid2x2 size={22} aria-hidden />More
         </button>
-      </nav>
+      </nav>}
 
       <Sheet open={more} onClose={() => setMore(false)} label="More modules">
         <div className="grid grid-cols-3 gap-2">

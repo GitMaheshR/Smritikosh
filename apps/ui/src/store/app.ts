@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import {
-  LessonIndex, SearchIndex, completeTask, descendants, hashPin, isOpenTask, missedReminders, pendingReminders,
-  snoozeTime, toLocalIso, verifyPin,
+  LessonIndex, NOTEBOOKS_SETTING, SearchIndex, completeTask, hasNotebook, hashPin, isBlankNote, isOpenTask,
+  missedReminders, normalizeNotebookName, notebookOf, parseNotebookList, pendingReminders, removeFromList,
+  renameInList, runNotesMigration, snoozeTime, toLocalIso, verifyPin, withNotebook,
   type Category, type ChecklistEntry, type DataStore, type Item, type Notifier, type ReminderEvent, type SnoozeKind, type Tag,
 } from '@smritikosh/core';
 import { createNotifier, createStore } from '../platform';
@@ -20,6 +21,10 @@ interface AppState {
   search: SearchIndex;
   lessons: LessonIndex;
   readingMode: boolean;
+  /** Saved notebook names, in the user's order (notes may also use names that are not saved yet). */
+  notebooks: string[];
+  /** Notes screen state kept across navigation: search text and filter ("all", "review", "none" or "nb:<name>"). */
+  notesView: { q: string; filter: string };
   pinHash: string | null;
   locked: boolean;
   theme: Theme;
@@ -39,6 +44,11 @@ interface AppState {
   lock(): void;
   setTheme(t: Theme): Promise<void>;
   setReadingMode(on: boolean): Promise<void>;
+  setNotesView(v: Partial<AppState['notesView']>): void;
+  /** Returns the saved name, or null if it was empty or already exists. */
+  addNotebook(name: string): Promise<string | null>;
+  renameNotebook(from: string, to: string): Promise<boolean>;
+  deleteNotebook(name: string): Promise<void>;
   openQuickAdd(v: boolean): void;
   openSearch(v: boolean): void;
   openEditor(id: string | null): void;
@@ -63,7 +73,7 @@ export function applyTheme(t: Theme) {
 
 export const useApp = create<AppState>((set, get) => ({
   ready: false, store: null, notifier: null, items: [], tags: [], categories: [], checklist: [], search, lessons,
-  readingMode: false, pinHash: null, locked: false, theme: 'system', quickAddOpen: false, searchOpen: false,
+  readingMode: false, notebooks: [], notesView: { q: '', filter: 'all' }, pinHash: null, locked: false, theme: 'system', quickAddOpen: false, searchOpen: false,
   prompts: [], missed: [], toast: null, editingId: null,
 
   async boot() {
@@ -76,6 +86,10 @@ export const useApp = create<AppState>((set, get) => ({
     applyTheme(t);
     set({ store, notifier, pinHash, theme: t, locked: !!pinHash, readingMode: reading === '1' });
     await store.purgeTrash(30);
+    await runNotesMigration(store);
+    // Notes opened with "New note" but never typed into are discarded (the editor does this on exit; this covers a crash).
+    for (const n of await store.listItems({ type: 'note' })) if (isBlankNote(n)) await store.deleteItem(n.id);
+    set({ notebooks: parseNotebookList(await store.getSetting(NOTEBOOKS_SETTING)) });
     await get().refresh();
 
     const now = new Date();
@@ -130,6 +144,46 @@ export const useApp = create<AppState>((set, get) => ({
     set({ readingMode: on });
   },
 
+  setNotesView: (v) => set({ notesView: { ...get().notesView, ...v } }),
+
+  async addNotebook(name) {
+    const n = normalizeNotebookName(name);
+    if (!n || hasNotebook(get().notebooks, n)) return null;
+    const next = withNotebook(get().notebooks, n);
+    await get().store!.setSetting(NOTEBOOKS_SETTING, JSON.stringify(next));
+    set({ notebooks: next });
+    return n;
+  },
+
+  async renameNotebook(from, to) {
+    const n = normalizeNotebookName(to);
+    const { store, notebooks, items } = get();
+    const clash = notebooks.some((x) => x.toLowerCase() === n.toLowerCase() && x.toLowerCase() !== from.toLowerCase());
+    if (!n || clash) return false;
+    const next = renameInList(notebooks, from, n);
+    await store!.setSetting(NOTEBOOKS_SETTING, JSON.stringify(next));
+    for (const i of items.filter((x) => x.type === 'note' && notebookOf(x)?.toLowerCase() === from.toLowerCase())) {
+      await store!.updateItem(i.id, { meta: { ...i.meta, notebook: n } });
+    }
+    set({ notebooks: next, notesView: get().notesView.filter === `nb:${from}` ? { ...get().notesView, filter: `nb:${n}` } : get().notesView });
+    await get().refresh(false);
+    return true;
+  },
+
+  async deleteNotebook(name) {
+    const { store, notebooks, items } = get();
+    const next = removeFromList(notebooks, name);
+    await store!.setSetting(NOTEBOOKS_SETTING, JSON.stringify(next));
+    // The notes stay; they just no longer belong to a notebook.
+    for (const i of items.filter((x) => x.type === 'note' && notebookOf(x)?.toLowerCase() === name.toLowerCase())) {
+      const { notebook: _n, ...meta } = i.meta;
+      void _n;
+      await store!.updateItem(i.id, { meta });
+    }
+    set({ notebooks: next, notesView: get().notesView.filter === `nb:${name}` ? { ...get().notesView, filter: 'all' } : get().notesView });
+    await get().refresh(false);
+  },
+
   openQuickAdd: (v) => set({ quickAddOpen: v, searchOpen: false }),
   openSearch: (v) => set({ searchOpen: v, quickAddOpen: false }),
   openEditor: (id) => set({ editingId: id }),
@@ -174,15 +228,10 @@ export const useApp = create<AppState>((set, get) => ({
 
   async removeWithUndo(item) {
     const s = get().store!;
-    // Deleting a subject or topic takes its whole subtree to the trash; Undo brings it all back.
-    const ids = item.type === 'note'
-      ? [item.id, ...descendants(get().items, item.id).filter((d) => !d.deleted_at).map((d) => d.id)]
-      : [item.id];
-    for (const id of ids) await s.deleteItem(id);
+    await s.deleteItem(item.id);
     await get().refresh();
-    const more = ids.length > 1 ? ` and ${ids.length - 1} inside` : '';
-    get().showToast(`Deleted "${item.title}"${more}`, async () => {
-      for (const id of ids) await s.restoreItem(id);
+    get().showToast(`Deleted "${item.title}"`, async () => {
+      await s.restoreItem(item.id);
       await get().refresh();
     });
   },

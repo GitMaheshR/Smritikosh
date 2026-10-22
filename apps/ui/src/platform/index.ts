@@ -43,6 +43,19 @@ async function capacitorStore(): Promise<DataStore> {
   return new SqlStore(driver);
 }
 
+/**
+ * Android hardware/gesture Back. `handler` returns true when it dealt with the press (closed a sheet, went back a
+ * screen); returning false at the start of the app lets Android leave the app. No-op on desktop and in the browser.
+ */
+export async function onHardwareBack(handler: () => boolean): Promise<() => void> {
+  if (platformName() !== 'android') return () => {};
+  const { App } = await import('@capacitor/app');
+  const sub = await App.addListener('backButton', () => {
+    if (!handler()) void App.exitApp();
+  });
+  return () => void sub.remove();
+}
+
 export async function createNotifier(): Promise<Notifier> {
   const p = platformName();
   return p === 'desktop' ? desktopNotifier(window.smritikosh!.notifier) : p === 'android' ? androidNotifier() : webNotifier();

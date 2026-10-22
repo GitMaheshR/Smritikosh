@@ -3,6 +3,7 @@ import { HashRouter, Route, Routes } from 'react-router-dom';
 import { applyTheme, useApp } from './store/app';
 import { Shell } from './components/Shell';
 import { LockScreen } from './components/LockScreen';
+import { BackHandler } from './components/BackHandler';
 import { Dashboard, ModulePage, VaultPage } from './pages/Pages';
 import { TasksPage } from './pages/Tasks';
 import { NotesPage } from './pages/Notes';
@@ -27,6 +28,7 @@ export default function App() {
 
   return (
     <HashRouter>
+      <BackHandler />
       <Routes>
         <Route element={<Shell />}>
           <Route index element={<Dashboard />} />

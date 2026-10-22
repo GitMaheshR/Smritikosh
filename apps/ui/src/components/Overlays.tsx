@@ -30,7 +30,8 @@ export function QuickAdd() {
       type, title: parsed.title, due_at: parsed.due_at, remind_at: parsed.due_at,
       category: parsed.category, priority: parsed.priority, tags: parsed.tags,
       status: type === 'task' ? 'todo' : null,
-      ...(type === 'note' ? { body: '', meta: { level: 'note' } } : {}),
+      ...(type === 'note' ? { body: `# ${parsed.title}
+`, meta: {} } : {}),
     });
     await refresh();
     close();

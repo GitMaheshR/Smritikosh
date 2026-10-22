@@ -171,7 +171,7 @@ function NoteView({ note }: { note: Item }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <textarea ref={area} aria-label="Note text (markdown)" value={body} onChange={(e) => setBody(e.target.value)}
           placeholder="Write in markdown. Fenced code blocks are highlighted."
-          className={`${field} num min-h-[320px] min-w-0 resize-y py-2 font-mono ${tab === 'preview' ? 'hidden lg:block' : ''}`} />
+          className={`${field} num !min-h-[320px] min-w-0 resize-y py-2 font-mono ${tab === 'preview' ? 'hidden lg:block' : ''}`} />
         <div className={`min-h-[120px] min-w-0 rounded-control border border-border bg-surface p-3 ${tab === 'edit' ? 'hidden lg:block' : ''}`}>
           {body.trim() ? <Markdown source={body} /> : <p className="text-meta text-muted">Preview appears here.</p>}
         </div>

@@ -45,6 +45,20 @@
 - Wide-screen (>= 1100 px) list + editor layout was not inspected visually (the browser pane is phone-width).
 - The Windows installer was built but not installed and run.
 
+### Device test: Moto G82 5G, Android, USB (2026-10-22)
+Debug APK installed over USB and driven with taps.
+- **Worked:** app starts; SQLite initialises and seeds the 7 categories; created Subject → Topic → Note with correct
+  breadcrumb; code-block toolbar button inserts a fence; Preview renders and highlights code (`const` coloured);
+  edit survived backgrounding and a cold start (confirmed by reading the app's database off the phone); data survived a
+  reinstall (`install -r`); the soft keyboard opens and the nav bar stays above it; quick-add `lesson:` opens the
+  pre-filled lesson form; situation suggestions show as a native dropdown.
+- **Bug found and fixed:** the note editor textarea rendered about two lines tall (`min-h-touch` beat `min-h-[320px]`,
+  also visible in the browser earlier). Fixed with `!min-h-[320px]`; confirmed tall on the phone.
+- **Found, not fixed (Phase 6 per plan):** the Android Back button is not handled, so Back from a screen exits the app
+  to the home screen instead of going to the previous screen.
+- **Not tested on the phone:** search speed with 500 notes (the `#/dev/seed` page has no link and the app has no URL
+  bar), Reading mode, Pin / Revise / Move, delete + Undo, "Before you start…" results, reminders from Phase 2.
+
 ## Phase 2 — Tasks, reminders, dashboard (built 2026-10-22)
 
 ### Built

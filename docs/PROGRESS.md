@@ -1,5 +1,28 @@
 # Smritikosh — progress
 
+## Logo and Java / database notes (2026-10-25)
+- **Logo: "open book of memories"** (option 5 of `docs/design/logo-options.html`; the rendered 512px version is `docs/design/logo-512.png`).
+  Drawn from scratch as a small SVG (two pages, faint text lines, three teal "spark" dots above). Used for: the header mark and lock screen
+  (`LogoGlyph` / `BrandMark` in `components/ui.tsx`, themed through tokens including the new `--c-spark`), the browser favicon
+  (`apps/ui/public/favicon.svg`), the Android launcher icons (legacy square, round and adaptive foreground, indigo background colour),
+  the Windows installer and uninstaller icon, the app .exe icon, the window and taskbar icon, and the tray icon.
+  Everything is regenerated with `apps/desktop/node_modules/.bin/electron scripts/make-icons.cjs` (renders the SVG with Electron, writes the
+  PNGs, `apps/desktop/build/icon.ico` and `apps/desktop/src/trayIcon.ts`).
+- The .exe icon is stamped by `apps/desktop/scripts/after-pack.cjs` using rcedit from electron-builder's cache, because electron-builder's own
+  icon step is off ("signAndEditExecutable": false). If rcedit is not in the cache the step is skipped with a warning and the exe keeps Electron's icon.
+- **Java and database study notes** (`packages/core/src/study.ts`, 11 notes with code and tables): Java collections, equals/hashCode,
+  String/StringBuilder/StringBuffer, Streams and Optional, JVM memory and GC, JDBC and connection pools; ACID and isolation levels,
+  indexes, normalisation, SQL joins, SQL interview queries. Categories "Java" (6) and "Databases" (5); four are flagged Review later.
+  Settings > Sample data has its own button for them, independent of the everyday sample data, and "Remove sample data" removes both.
+  Tests: 73 core (new: study notes).
+- **Bug found on the phone and fixed:** with notifications refused by the system, scheduling a reminder threw "Notifications not enabled on this
+  device" and the uncaught error stopped the app at "Opening Smritikosh…". Reminder scheduling failures are now caught: the app starts, and a
+  "Reminders are switched off" notice shows on Home until scheduling works again (Settings > Reminders > Check permissions retries).
+  After the fix the app started and the Oct 31 reminder alarm was confirmed scheduled.
+- Checked: the logo in the header in the browser and on the phone; the installer icon and the app .exe icon extracted from the built files;
+  study notes in the browser (Java code highlighted) and on the phone (11 added). Not looked at: the Android launcher icon on the phone's home
+  screen, and the tray icon on screen.
+
 ## Categories instead of tags (2026-10-25)
 Tags are gone from every screen; categories replace them, in two separate lists managed in Settings.
 - **Task categories** (Settings > Task categories): the Category dropdown on the task form and the filter on the Tasks screen.

@@ -21,6 +21,8 @@ interface AppState {
   search: SearchIndex;
   lessons: LessonIndex;
   readingMode: boolean;
+  /** True when the system refused to schedule reminders (notifications off). The app keeps working. */
+  remindersBlocked: boolean;
   /** Saved notebook names, in the user's order (notes may also use names that are not saved yet). */
   notebooks: string[];
   /** Notes screen state kept across navigation: search text and filter ("all", "review", "none" or "nb:<name>"). */
@@ -75,7 +77,7 @@ export function applyTheme(t: Theme) {
 
 export const useApp = create<AppState>((set, get) => ({
   ready: false, store: null, notifier: null, items: [], tags: [], categories: [], checklist: [], search, lessons,
-  readingMode: false, notebooks: [], notesView: { q: '', filter: 'all' }, pinHash: null, locked: false, theme: 'system', quickAddOpen: false, searchOpen: false,
+  readingMode: false, remindersBlocked: false, notebooks: [], notesView: { q: '', filter: 'all' }, pinHash: null, locked: false, theme: 'system', quickAddOpen: false, searchOpen: false,
   prompts: [], missed: [], toast: null,
 
   async boot() {
@@ -101,7 +103,7 @@ export const useApp = create<AppState>((set, get) => ({
     window.setInterval(stamp, 60_000);
 
     notifier.onEvent((e) => void get().handleReminder(e));
-    void notifier.requestPermission().then(() => get().refresh());
+    void notifier.requestPermission().then(() => get().refresh()).catch(() => set({ remindersBlocked: true }));
     set({ ready: true });
   },
 
@@ -115,7 +117,16 @@ export const useApp = create<AppState>((set, get) => ({
     lessons.build(items);
     set({ items, tags, categories, checklist });
     // Everything the notifier has scheduled is derived from data, so it can never drift.
-    if (reschedule) await notifier?.rescheduleAll(pendingReminders(items, new Date()));
+    if (reschedule) {
+      try {
+        await notifier?.rescheduleAll(pendingReminders(items, new Date()));
+        if (get().remindersBlocked) set({ remindersBlocked: false });
+      } catch (e) {
+        // Reminders failing (for example notifications switched off for the app) must never stop the app from working.
+        console.warn('Reminders could not be scheduled', e);
+        if (!get().remindersBlocked) set({ remindersBlocked: true });
+      }
+    }
   },
 
   async setPin(pin) {

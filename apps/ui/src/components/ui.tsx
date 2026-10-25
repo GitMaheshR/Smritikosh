@@ -7,9 +7,28 @@ const cx = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).jo
 
 // ---- Page furniture -----------------------------------------------------------------------------
 
+/** The Smritikosh logo: an open book with a spark rising from its pages (a store of memories). */
+export function LogoGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" className={className} aria-hidden>
+      <path className="fill-on-primary" d="M9 20 C18 15 26 16 31 22 V54 C26 48 18 47 9 51 Z" />
+      <path className="fill-on-primary" d="M55 20 C46 15 38 16 33 22 V54 C38 48 46 47 55 51 Z" />
+      <g className="fill-primary" opacity=".3">
+        <rect x="14" y="26" width="12" height="3" rx="1.5" /><rect x="14" y="33" width="12" height="3" rx="1.5" />
+        <rect x="38" y="26" width="12" height="3" rx="1.5" /><rect x="38" y="33" width="12" height="3" rx="1.5" />
+      </g>
+      <circle className="fill-spark" cx="32" cy="10.5" r="4.4" />
+      <circle className="fill-spark" cx="22" cy="12" r="2.2" opacity=".7" />
+      <circle className="fill-spark" cx="42" cy="12" r="2.2" opacity=".7" />
+    </svg>
+  );
+}
+
 export function BrandMark({ size = 'md' }: { size?: 'sm' | 'md' }) {
   return (
-    <div aria-hidden className={cx('grid shrink-0 place-items-center bg-primary font-extrabold text-on-primary shadow-mark', size === 'md' ? 'h-11 w-11 rounded-tile text-title' : 'h-9 w-9 rounded-control text-heading')}>✳</div>
+    <div aria-hidden className={cx('grid shrink-0 place-items-center bg-primary shadow-mark', size === 'md' ? 'h-11 w-11 rounded-tile' : 'h-9 w-9 rounded-control')}>
+      <LogoGlyph className={size === 'md' ? 'h-8 w-8' : 'h-6 w-6'} />
+    </div>
   );
 }
 

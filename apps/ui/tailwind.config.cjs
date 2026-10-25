@@ -13,7 +13,7 @@ module.exports = {
       primary: c('primary'), 'primary-soft': c('primary-soft'), 'on-primary': c('on-primary'),
       secondary: c('secondary'), 'secondary-soft': c('secondary-soft'), 'on-secondary': c('on-secondary'),
       high: c('high'), 'high-soft': c('high-soft'), medium: c('medium'), 'medium-soft': c('medium-soft'),
-      low: c('low'), 'low-soft': c('low-soft'), overdue: c('overdue'), focus: c('focus'),
+      low: c('low'), 'low-soft': c('low-soft'), overdue: c('overdue'), focus: c('focus'), spark: c('spark'),
     },
     fontFamily: { sans: 'var(--font-sans)', serif: 'var(--font-serif)', mono: 'var(--font-mono)' },
     fontSize: {

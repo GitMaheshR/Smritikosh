@@ -14,7 +14,7 @@ const KIND: Record<string, { label: string; icon: LucideIcon }> = {
 const pathFor = (i: Item) => (i.type === 'note' ? `/notes/${i.id}` : i.type === 'lesson' ? `/journal/${i.id}` : `/goals/${i.id}`);
 
 export function HomePage() {
-  const { items, complete, reopen, missed, dismissMissed, newNote } = useApp();
+  const { items, complete, reopen, missed, dismissMissed, newNote, remindersBlocked } = useApp();
   const nav = useNavigate();
   const now = new Date();
   const { weekday, date } = todayLine(now);
@@ -38,6 +38,13 @@ export function HomePage() {
         subtitle="Here’s your day at a glance. Start with one meaningful step."
         action={<span className="hidden items-center gap-2 rounded-control border border-border bg-surface px-3 py-2.5 text-meta text-muted md:inline-flex"><CalendarClock size={16} aria-hidden />Today · {date}</span>} />
 
+      {remindersBlocked && (
+        <div role="alert" className="mb-4 rounded-card border border-border border-l-4 border-l-overdue bg-surface p-4">
+          <h2 className="text-heading">Reminders are switched off</h2>
+          <p className="mb-3 mt-1 text-body text-muted">Smritikosh can’t send notifications, so reminders won’t ring. Allow notifications for the app in your phone’s settings, then check again.</p>
+          <Link to="/settings" className="btn">Open Settings</Link>
+        </div>
+      )}
       {missed.length > 0 && (
         <div role="status" className="mb-4 rounded-card border border-border border-l-4 border-l-medium bg-surface p-4">
           <div className="mb-2 flex items-start justify-between gap-2">

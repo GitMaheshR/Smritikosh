@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smritikosh · logo options</title>
+<style>
+  :root { --primary:#3547A6; --teal:#287D78; --teal-light:#5FD6C9; --bg:#F6F7FB; --text:#202538; --muted:#687086; --border:#E2E5EF; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, "Segoe UI", system-ui, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 18px 48px; }
+  h1 { font-size: 28px; letter-spacing: -.03em; margin: 0 0 6px; }
+  .lead { color: var(--muted); margin: 0 0 24px; max-width: 70ch; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 20px; padding: 18px; }
+  .num { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--teal); }
+  .card h2 { font-size: 17px; margin: 4px 0 6px; letter-spacing: -.01em; }
+  .card p { margin: 0 0 14px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+  .stage { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .tile { display: grid; place-items: center; background: var(--primary); }
+  .t96 { width: 96px; height: 96px; border-radius: 26px; box-shadow: 0 8px 20px #3547a62b; }
+  .t48 { width: 48px; height: 48px; border-radius: 13px; }
+  .t32 { width: 32px; height: 32px; border-radius: 9px; }
+  .round { border-radius: 50% !important; }
+  .t96 svg { width: 72px; height: 72px; } .t48 svg { width: 36px; height: 36px; } .t32 svg { width: 24px; height: 24px; }
+  .bar { margin-top: 14px; display: flex; gap: 10px; }
+  .strip { flex: 1; display: flex; align-items: center; gap: 10px; border-radius: 14px; padding: 10px 12px; font-weight: 800; letter-spacing: -.02em; font-size: 18px; }
+  .strip.light { background: var(--bg); border: 1px solid var(--border); }
+  .strip.dark { background: #11131C; color: #EBEEF7; }
+  .strip.dark .tile { background: #8B9AF6; }
+  .strip.dark svg [data-ink] { fill: #11131C; stroke: #11131C; }
+  .strip.dark svg [data-accent] { fill: #1d6a64; stroke: #1d6a64; }
+  .icon-bg { color: #fff; }
+  svg [data-ink] { stroke: #fff; } svg [data-fill] { fill: #fff; } svg [data-accent] { fill: var(--teal-light); stroke: var(--teal-light); }
+  svg .nostroke { stroke: none; } svg .nofill { fill: none; }
+  .note { margin-top: 26px; font-size: 13px; color: var(--muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Smritikosh · logo options</h1>
+  <p class="lead">Smritikosh means “treasury of memories” (<i>smriti</i> = memory, <i>kosh</i> = store). These six marks are drawn from scratch as simple shapes, in the app’s indigo and teal. Each is shown as the phone app icon, at small sizes, and next to the name on a light and a dark background.</p>
+
+  <div class="grid" id="grid"></div>
+
+  <p class="note">All six are plain geometric shapes (rounded rectangles, circles, arcs and one curve), so none copies a known logo, but nothing here has been checked against trademark registers. Tell me a number (or a mix, like “option 3 with the dot from option 5”) and I will use it for the app header, the phone icon, the Windows icon and the tray icon.</p>
+</div>
+
+<script>
+const options = [
+  { n: 1, title: 'The S', text: 'A single flowing S, the first letter of the name, with a bright dot like a spark of memory. Friendly and easy to recognise at small sizes.',
+    svg: `<svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round"><path data-ink class="nofill" stroke-width="7" d="M43 21 C43 11 21 11 21 23 C21 34 43 30 43 42 C43 54 21 53 21 43"/><circle data-accent class="nostroke" cx="48" cy="14" r="4.5"/></svg>` },
+  { n: 2, title: 'The vault', text: 'A small treasure box with a keyhole: “kosh” is a store or treasury. It says your memories are kept safe and private.',
+    svg: `<svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round"><path data-ink class="nofill" stroke-width="4.5" d="M14 30 V25 a9 9 0 0 1 9-9 h18 a9 9 0 0 1 9 9 v5"/><rect data-ink class="nofill" stroke-width="4.5" x="14" y="29" width="36" height="24" rx="6"/><circle data-accent class="nostroke" cx="32" cy="38.5" r="4"/><rect data-accent class="nostroke" x="30.3" y="40" width="3.4" height="8" rx="1.7"/></svg>` },
+  { n: 3, title: 'Stacked memories', text: 'Three cards stacked like layers of time, with the newest in front. Matches the notes and journal cards in the app.',
+    svg: `<svg viewBox="0 0 64 64"><rect data-fill class="nostroke" x="10" y="9" width="36" height="25" rx="7" opacity=".4"/><rect data-fill class="nostroke" x="16" y="17" width="36" height="25" rx="7" opacity=".7"/><rect data-fill class="nostroke" x="22" y="25" width="34" height="30" rx="8"/><rect data-accent class="nostroke" x="28" y="33" width="22" height="5" rx="2.5" fill="#287D78"/><rect data-accent class="nostroke" x="28" y="42" width="13" height="5" rx="2.5" fill="#287D78" opacity=".55"/></svg>` },
+  { n: 4, title: 'Four petals', text: 'A simple flower or compass made of four rounded petals around a bright centre: something remembered, growing outward. Calm and distinctive.',
+    svg: `<svg viewBox="0 0 64 64"><g data-fill class="nostroke"><ellipse cx="32" cy="19" rx="7.5" ry="12"/><ellipse cx="32" cy="45" rx="7.5" ry="12"/><ellipse cx="19" cy="32" rx="12" ry="7.5" opacity=".6"/><ellipse cx="45" cy="32" rx="12" ry="7.5" opacity=".6"/></g><circle data-accent class="nostroke" cx="32" cy="32" r="5.5"/></svg>` },
+  { n: 5, title: 'The bookmark', text: 'A bookmark ribbon with a bright dot marking a moment worth keeping. Simple, tall shape that works well as a small icon.',
+    svg: `<svg viewBox="0 0 64 64"><path data-fill class="nostroke" d="M19 10 h26 a5 5 0 0 1 5 5 V54 a1.5 1.5 0 0 1 -2.4 1.2 L32 43.5 L16.4 55.2 A1.5 1.5 0 0 1 14 54 V15 a5 5 0 0 1 5 -5 Z"/><circle data-accent class="nostroke" cx="32" cy="24" r="6" fill="#287D78"/></svg>` },
+  { n: 6, title: 'Daybreak', text: 'A small sun rising over a line, for “mark the day”. Warm and hopeful; fits the “Make room for what matters” home screen.',
+    svg: `<svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round"><path data-accent class="nostroke" d="M18 43 a14 14 0 0 1 28 0 Z"/><path data-ink class="nofill" stroke-width="4.5" d="M12 47 H52"/><path data-ink class="nofill" stroke-width="4.5" d="M32 13 V19 M16 20 l4 4 M48 20 l-4 4"/></svg>` },
+];
+const grid = document.getElementById('grid');
+for (const o of options) {
+  const el = document.createElement('article');
+  el.className = 'card';
+  el.innerHTML = `
+    <div class="num">Option ${o.n}</div><h2>${o.title}</h2><p>${o.text}</p>
+    <div class="stage">
+      <div class="tile t96">${o.svg}</div>
+      <div class="tile t48">${o.svg}</div>
+      <div class="tile t32">${o.svg}</div>
+      <div class="tile t48 round">${o.svg}</div>
+    </div>
+    <div class="bar">
+      <div class="strip light"><div class="tile t32">${o.svg}</div>Smritikosh</div>
+      <div class="strip dark"><div class="tile t32">${o.svg}</div>Smritikosh</div>
+    </div>`;
+  grid.appendChild(el);
+}
+</script>
+</body>
+</html>

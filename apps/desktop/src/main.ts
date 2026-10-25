@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, Menu, nativeImage, Notification, Tray } fr
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { SqlStore, type SqlDriver } from '@smritikosh/core';
-import { TRAY_ICON_DATA_URL } from './trayIcon';
+import { APP_ICON_DATA_URL, TRAY_ICON_DATA_URL } from './trayIcon';
 
 let store: SqlStore;
 let win: BrowserWindow | null = null;
@@ -60,7 +60,7 @@ function showWindow() {
 
 function createWindow(hidden: boolean) {
   win = new BrowserWindow({
-    width: 1200, height: 800, minWidth: 360, minHeight: 600, title: 'Smritikosh', show: !hidden,
+    width: 1200, height: 800, minWidth: 360, minHeight: 600, title: 'Smritikosh', show: !hidden, icon: nativeImage.createFromDataURL(APP_ICON_DATA_URL),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true, nodeIntegration: false, sandbox: true,

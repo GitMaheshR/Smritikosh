@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
-import { isValidPin, listNotebooks, loadSampleData, removeSampleData } from '@smritikosh/core';
+import { isValidPin, listNotebooks, loadSampleData, loadStudyNotes, removeSampleData } from '@smritikosh/core';
 import { useApp } from '../store/app';
 import { Card, Chip, PageHeader } from '../components/ui';
 import { platformName } from '../platform';
@@ -26,7 +26,7 @@ function AppearanceCard() {
 }
 
 function NotificationsCard() {
-  const { notifier, showToast } = useApp();
+  const { notifier, showToast, refresh, remindersBlocked } = useApp();
   const [auto, setAuto] = useState<boolean | null>(null);
   const [perm, setPerm] = useState<string>('');
   useEffect(() => { void notifier?.getAutoStart?.().then(setAuto); }, [notifier]);
@@ -38,7 +38,7 @@ function NotificationsCard() {
           : 'Reminders use exact alarms so they fire on time, even with the app closed.'}
       </p>
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className="btn" onClick={async () => setPerm((await notifier?.requestPermission()) ? 'Reminders are allowed.' : 'Not allowed yet. Enable notifications (and exact alarms) in system settings.')}>Check permissions</button>
+        <button type="button" className="btn" onClick={async () => { const ok = await notifier?.requestPermission().catch(() => false); await refresh(); setPerm(ok && !useApp.getState().remindersBlocked ? 'Reminders are allowed.' : 'Not allowed yet. Turn on notifications (and exact alarms) for Smritikosh in your phone settings, then tap this again.'); }}>Check permissions</button>
         {auto !== null && (
           <label className="flex min-h-touch items-center gap-3 text-body font-semibold">
             <input type="checkbox" className="h-5 w-5 accent-[rgb(var(--c-secondary))]" checked={auto}
@@ -47,7 +47,7 @@ function NotificationsCard() {
           </label>
         )}
       </div>
-      {perm && <p role="status" className="mt-2 text-meta text-muted">{perm}</p>}
+      {(perm || remindersBlocked) && <p role="status" className="mt-2 text-meta text-muted">{perm || 'Reminders are switched off right now: notifications are not allowed for this app.'}</p>}
     </Card>
   );
 }
@@ -81,33 +81,35 @@ function PinCard() {
 function SampleDataCard() {
   const { store, refresh, showToast, items } = useApp();
   const [busy, setBusy] = useState(false);
-  const has = items.some((i) => i.meta.sample === true);
-  async function add() {
+  const hasStudy = items.some((i) => i.meta.sampleSet === 'study');
+  const hasEveryday = items.some((i) => i.meta.sample === true && i.meta.sampleSet !== 'study');
+  async function run(fn: () => Promise<string>) {
     setBusy(true);
-    try {
-      const r = await loadSampleData(store!);
-      await refresh();
-      showToast(r.tasks + r.notes + r.lessons + r.goals === 0 ? 'Sample data is already loaded' : `Added ${r.tasks} tasks, ${r.notes} notes, ${r.lessons} journal entries, ${r.goals} goals`);
-    } finally { setBusy(false); }
+    try { const msg = await fn(); await refresh(); showToast(msg); } finally { setBusy(false); }
   }
+  const addEveryday = () => run(async () => {
+    const r = await loadSampleData(store!);
+    return `Added ${r.tasks} tasks, ${r.notes} notes, ${r.lessons} journal entries, ${r.goals} goals`;
+  });
+  const addStudy = () => run(async () => `Added ${await loadStudyNotes(store!)} Java and database notes (Notes screen)`);
   async function remove() {
-    if (!window.confirm('Remove all sample tasks, notes, journal entries and goals? Your own items are not touched.')) return;
-    setBusy(true);
-    try {
-      const n = await removeSampleData(store!);
-      await refresh();
-      showToast(`Removed ${n} sample items`);
-    } finally { setBusy(false); }
+    if (!window.confirm('Remove all sample tasks, notes, journal entries, goals and study notes? Your own items are not touched.')) return;
+    await run(async () => `Removed ${await removeSampleData(store!)} sample items`);
   }
   return (
     <Card title="Sample data">
       <p className="mb-3 text-body text-muted">
-        Adds example tasks (overdue, today, repeating, free-time), notes with code and tables, journal entries and goals, so you can try every screen.
-        A few sample tasks have reminders set for the coming days. Remove them any time; your own items stay.
+        Example content so you can try every screen. A few sample tasks have reminders set for the coming days.
+        Remove it any time; your own items stay.
       </p>
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={busy || has} onClick={() => void add()} className="btn btn-primary disabled:opacity-50">{has ? 'Sample data loaded' : 'Add sample data'}</button>
-        {has && <button type="button" disabled={busy} onClick={() => void remove()} className="btn">Remove sample data</button>}
+        <button type="button" disabled={busy || hasEveryday} onClick={() => void addEveryday()} className="btn btn-primary disabled:opacity-50">
+          {hasEveryday ? 'Everyday sample loaded' : 'Add tasks, notes, journal and goals'}
+        </button>
+        <button type="button" disabled={busy || hasStudy} onClick={() => void addStudy()} className="btn disabled:opacity-50">
+          {hasStudy ? 'Java and database notes loaded' : 'Add Java and database notes'}
+        </button>
+        {(hasEveryday || hasStudy) && <button type="button" disabled={busy} onClick={() => void remove()} className="btn">Remove sample data</button>}
       </div>
     </Card>
   );

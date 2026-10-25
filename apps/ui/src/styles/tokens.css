@@ -20,6 +20,7 @@
   --c-low: 40 117 110;     --c-low-soft: 234 246 244;
   --c-overdue: 196 86 66;
   --c-focus: 154 168 255;
+  --c-spark: 95 214 201;   /* the glowing dots in the logo */
 
   --font-sans: Inter, 'Segoe UI', Roboto, 'Noto Sans', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'Source Serif 4', Georgia, serif;
@@ -73,6 +74,7 @@
   --c-low: 96 200 190;      --c-low-soft: 22 49 50;
   --c-overdue: 242 140 112;
   --c-focus: 139 154 246;
+  --c-spark: 23 98 92;
 
   --shadow-float: 0 10px 28px rgb(0 0 0 / 0.5);
   --shadow-mark: 0 8px 20px rgb(0 0 0 / 0.35);

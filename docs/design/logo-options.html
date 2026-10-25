@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smritikosh · memory logo options</title>
+<style>
+  :root { --primary:#3547A6; --teal:#287D78; --teal-light:#5FD6C9; --bg:#F6F7FB; --text:#202538; --muted:#687086; --border:#E2E5EF; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, "Segoe UI", system-ui, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 18px 48px; }
+  h1 { font-size: 28px; letter-spacing: -.03em; margin: 0 0 6px; }
+  .lead { color: var(--muted); margin: 0 0 24px; max-width: 72ch; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 20px; padding: 18px; }
+  .num { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--teal); }
+  .card h2 { font-size: 17px; margin: 4px 0 6px; letter-spacing: -.01em; }
+  .card p { margin: 0 0 14px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+  .stage { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .tile { display: grid; place-items: center; background: var(--primary); }
+  .t96 { width: 96px; height: 96px; border-radius: 26px; box-shadow: 0 8px 20px #3547a62b; }
+  .t48 { width: 48px; height: 48px; border-radius: 13px; }
+  .t32 { width: 32px; height: 32px; border-radius: 9px; }
+  .round { border-radius: 50% !important; }
+  .t96 svg { width: 76px; height: 76px; } .t48 svg { width: 38px; height: 38px; } .t32 svg { width: 25px; height: 25px; }
+  .bar { margin-top: 14px; display: flex; gap: 10px; }
+  .strip { flex: 1; display: flex; align-items: center; gap: 10px; border-radius: 14px; padding: 10px 12px; font-weight: 800; letter-spacing: -.02em; font-size: 18px; }
+  .strip.light { background: var(--bg); border: 1px solid var(--border); }
+  .strip.dark { background: #11131C; color: #EBEEF7; }
+  .strip.dark .tile { background: #8B9AF6; }
+  .strip.dark svg [data-fill] { fill: #11131C; } .strip.dark svg [data-ink] { stroke: #11131C; }
+  .strip.dark svg [data-accent] { fill: #17625c; stroke: none; }
+  svg [data-ink] { stroke: #fff; } svg [data-fill] { fill: #fff; } svg [data-accent] { fill: var(--teal-light); }
+  svg .nostroke { stroke: none; } svg .nofill { fill: none; }
+  .note { margin-top: 26px; font-size: 13px; color: var(--muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Smritikosh · memory logo options</h1>
+  <p class="lead">Smritikosh means “treasury of memories”. Every option below shows memory directly: a jar of remembered moments, a brain, a photo, an elephant (“never forgets”), an open book, and a head with sparks of thought. All are drawn from scratch in the app’s indigo and teal.</p>
+  <div class="grid" id="grid"></div>
+  <p class="note">None of these copies a known logo, but they have not been checked against trademark registers. The elephant, brain and head are common symbols, so a quick search is worth doing before you publish the app. Tell me a number (or a mix) and I will use it for the app header, the phone icon, the Windows icon and the tray icon. The earlier abstract set is kept in <code>logo-options-v1-abstract.html</code>.</p>
+</div>
+
+<script>
+const options = [
+  { n: 1, title: 'Memory jar', text: 'A glass jar holding glowing dots, like fireflies: each one a remembered moment. “Kosh” is a store, so this is a jar of memories. Warm, simple, and unlike other note apps.',
+    svg: `<svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect data-fill class="nostroke" x="21" y="8" width="22" height="8" rx="3.5"/><path data-ink class="nofill" stroke-width="4.5" d="M24 20 H40 V24 C46.5 26.5 49 31 49 37 V47 A9 9 0 0 1 40 56 H24 A9 9 0 0 1 15 47 V37 C15 31 17.5 26.5 24 24 Z"/><circle data-accent class="nostroke" cx="27" cy="38" r="3.8"/><circle data-accent class="nostroke" cx="37.5" cy="34" r="3"/><circle data-accent class="nostroke" cx="35" cy="46" r="4.3"/><circle data-accent class="nostroke" cx="26.5" cy="48" r="2.4" opacity=".7"/></svg>` },
+  { n: 2, title: 'Brain', text: 'A simple brain outline with a bright spark in the centre. The most direct sign of “memory”, and easy to read even at 24 pixels.',
+    svg: `<svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round"><path data-ink class="nofill" stroke-width="4.5" d="M32 14 C26 8 14 11 14 22 C8 25 8 36 15 38 C14 47 24 54 32 49 C40 54 50 47 49 38 C56 36 56 25 50 22 C50 11 38 8 32 14 Z"/><path data-ink class="nofill" stroke-width="3.5" d="M32 15 V48 M22 27 q5 2 7 8 M42 27 q-5 2 -7 8"/><circle data-accent class="nostroke" cx="32" cy="32" r="4.2"/></svg>` },
+  { n: 3, title: 'Photo memory', text: 'An instant photo with a sun and hills: the classic picture of “a memory”. Friendly and personal, and it fits notes, journal and goals.',
+    svg: `<svg viewBox="0 0 64 64"><rect data-fill class="nostroke" x="12" y="9" width="40" height="46" rx="7"/><rect data-accent class="nostroke" x="17.5" y="14.5" width="29" height="25" rx="3.5"/><circle class="nostroke" cx="38" cy="22.5" r="3.6" fill="#fff"/><path class="nostroke" fill="#fff" d="M17.5 39.5 L27 28 L34 36 L38.5 31 L46.5 39.5 Z"/><rect class="nostroke" x="19" y="45.5" width="17" height="3.6" rx="1.8" fill="#9AA3C7"/></svg>` },
+  { n: 4, title: 'Elephant', text: 'An elephant face: “an elephant never forgets”. Memorable, warm and a little playful, and widely understood in India as a symbol of wisdom and memory.',
+    svg: `<svg viewBox="0 0 64 64"><circle data-fill class="nostroke" cx="14.5" cy="30" r="11.5" opacity=".7"/><circle data-fill class="nostroke" cx="49.5" cy="30" r="11.5" opacity=".7"/><circle data-fill class="nostroke" cx="32" cy="28" r="15"/><rect data-fill class="nostroke" x="28" y="32" width="8" height="24" rx="4"/><circle class="nostroke" cx="25.5" cy="25" r="2.2" fill="#3547A6"/><circle class="nostroke" cx="38.5" cy="25" r="2.2" fill="#3547A6"/><circle data-accent class="nostroke" cx="32" cy="15.5" r="2.6"/></svg>` },
+  { n: 5, title: 'Open book of memories', text: 'An open book with a spark rising from its pages: stories and moments you can open again and read. Fits notes and journal, and reads clearly even when tiny.',
+    svg: `<svg viewBox="0 0 64 64"><path data-fill class="nostroke" d="M9 20 C18 15 26 16 31 22 V54 C26 48 18 47 9 51 Z"/><path data-fill class="nostroke" d="M55 20 C46 15 38 16 33 22 V54 C38 48 46 47 55 51 Z"/><g class="nostroke" fill="#3547A6" opacity=".3"><rect x="14" y="26" width="12" height="3" rx="1.5"/><rect x="14" y="33" width="12" height="3" rx="1.5"/><rect x="38" y="26" width="12" height="3" rx="1.5"/><rect x="38" y="33" width="12" height="3" rx="1.5"/></g><circle data-accent class="nostroke" cx="32" cy="10.5" r="4.4"/><circle data-accent class="nostroke" cx="22" cy="12" r="2.2" opacity=".7"/><circle data-accent class="nostroke" cx="42" cy="12" r="2.2" opacity=".7"/></svg>` },
+  { n: 6, title: 'Head with sparks', text: 'A head in profile with a cluster of connected dots: thoughts and memories lighting up. Reads as “mind” and “remember” right away.',
+    svg: `<svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round"><path data-fill class="nostroke" d="M27 56 V47 C18 43 13 36 13 28 C13 16 22 8 33 8 C45 8 52 17 52 27 C52 31 50 33 50 35 L53 42 C53.5 43.5 52.5 44.5 51 44.5 H46 V50 C46 53.5 43.5 56 40 56 Z"/><g data-accent class="nostroke"><circle cx="28.5" cy="27" r="4"/><circle cx="40.5" cy="21.5" r="3.2"/><circle cx="38" cy="35" r="4"/><circle cx="26" cy="38.5" r="2.2" opacity=".7"/></g></svg>` },
+];
+const grid = document.getElementById('grid');
+for (const o of options) {
+  const el = document.createElement('article');
+  el.className = 'card';
+  el.innerHTML = `
+    <div class="num">Option ${o.n}</div><h2>${o.title}</h2><p>${o.text}</p>
+    <div class="stage">
+      <div class="tile t96">${o.svg}</div>
+      <div class="tile t48">${o.svg}</div>
+      <div class="tile t32">${o.svg}</div>
+      <div class="tile t48 round">${o.svg}</div>
+    </div>
+    <div class="bar">
+      <div class="strip light"><div class="tile t32">${o.svg}</div>Smritikosh</div>
+      <div class="strip dark"><div class="tile t32">${o.svg}</div>Smritikosh</div>
+    </div>`;
+  grid.appendChild(el);
+}
+</script>
+</body>
+</html>

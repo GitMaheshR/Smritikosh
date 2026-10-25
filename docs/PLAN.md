@@ -148,6 +148,9 @@ App lock: 4–6 digit PIN (stored as a PBKDF2 hash, never plain) on app open; fi
 Settings: categories (add/rename/reorder), theme (light/dark/system), notification times, backup folder, export/import.
 
 ## UI design and typography
+
+> **Superseded 2026-10-25.** The look described in this section ("Quiet notebook") was replaced by the Daymark design. The current rules are in CLAUDE.md, section "UI design system". The module list also changed: Journal (lessons) and Goals are built; Wishlists, Weekend, Stocks and Vault are not in the menu yet.
+
 The direction is "Quiet notebook": warm paper-toned background, ink-dark text, one deep-teal accent, and module colours used only as small dots and icons. It should feel calm at 11 pm when you are capturing a stray thought, and show what needs you today before anything else.
 Principles
 Today first. Every screen opens on what is due or late; history and archives are one tap deeper.

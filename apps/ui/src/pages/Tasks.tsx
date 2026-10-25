@@ -1,76 +1,108 @@
 import { useMemo, useState } from 'react';
-import { CheckCircle2, Clock, Plus } from 'lucide-react';
-import { filterTasks, groupTasks, isOpenTask, type Item } from '@smritikosh/core';
+import { useNavigate } from 'react-router-dom';
+import { ListChecks, Plus, Search } from 'lucide-react';
+import { freeTimeTasks, groupOf, groupTasks, isOpenTask, type Item } from '@smritikosh/core';
 import { useApp } from '../store/app';
-import { Chip, EmptyState, ItemRow } from '../components/ui';
+import { Chip, EmptyState, PageHeader, TaskRow } from '../components/ui';
 
-const PRI: [number, string][] = [[1, 'High'], [2, 'Medium'], [3, 'Low']];
+type Filter = 'all' | 'today' | 'overdue' | 'upcoming' | 'free' | 'done';
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: 'all', label: 'All' }, { key: 'today', label: 'Today' }, { key: 'overdue', label: 'Overdue' },
+  { key: 'upcoming', label: 'Upcoming' }, { key: 'free', label: 'Free time' }, { key: 'done', label: 'Completed' },
+];
+
+const matches = (t: Item, q: string) =>
+  !q || [t.title, t.category ?? '', t.body ?? '', ...t.tags].join(' ').toLowerCase().includes(q.toLowerCase());
 
 export function TasksPage() {
-  const { items, categories, checklist, complete, reopen, openEditor } = useApp();
-  const [category, setCategory] = useState<string | null>(null);
-  const [priority, setPriority] = useState<number | null>(null);
-  const [freeTime, setFreeTime] = useState(false);
-  const [showDone, setShowDone] = useState(false);
+  const { items, categories, checklist, complete, reopen } = useApp();
+  const nav = useNavigate();
+  const [filter, setFilter] = useState<Filter>('all');
+  const [q, setQ] = useState('');
+  const [category, setCategory] = useState('');
 
-  const tasks = useMemo(() => items.filter((i) => i.type === 'task'), [items]);
-  const open = useMemo(() => filterTasks(tasks, { category, priority, freeTime }), [tasks, category, priority, freeTime]);
-  const groups = useMemo(() => (freeTime ? [{ key: 'free', label: 'Free time, shortest first', items: open }] : groupTasks(open, new Date())), [open, freeTime]);
-  const done = useMemo(() => tasks.filter((t) => t.status === 'done').sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 30), [tasks]);
+  const tasks = useMemo(() => items.filter((i) => i.type === 'task' && matches(i, q) && (!category || i.category === category)), [items, q, category]);
   const progress = useMemo(() => {
     const m = new Map<string, { done: number; total: number }>();
     for (const c of checklist) {
       const p = m.get(c.item_id) ?? { done: 0, total: 0 };
-      p.total++; if (c.done) p.done++;
+      p.total++;
+      if (c.done) p.done++;
       m.set(c.item_id, p);
     }
     return m;
   }, [checklist]);
 
-  const toggle = (i: Item) => (isOpenTask(i) ? complete(i) : reopen(i));
-  const row = (i: Item) => (
-    <ItemRow key={i.id} item={i} onToggle={() => void toggle(i)} onOpen={() => openEditor(i.id)} extra={progress.get(i.id)} />
-  );
+  const sections = useMemo(() => {
+    const now = new Date();
+    const open = tasks.filter(isOpenTask);
+    if (filter === 'done') {
+      const done = tasks.filter((t) => t.status === 'done').sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 50);
+      return done.length ? [{ key: 'done', label: 'Completed', items: done }] : [];
+    }
+    if (filter === 'free') {
+      const free = freeTimeTasks(open);
+      return free.length ? [{ key: 'free', label: 'Free time, shortest first', items: free }] : [];
+    }
+    const groups = groupTasks(open, now);
+    if (filter === 'today') return groups.filter((g) => g.key === 'today');
+    if (filter === 'overdue') return groups.filter((g) => g.key === 'overdue');
+    if (filter === 'upcoming') return groups.filter((g) => g.key === 'week' || g.key === 'later');
+    return groups;
+  }, [tasks, filter]);
+
+  const toggle = (i: Item) => void (i.status === 'done' ? reopen(i) : complete(i));
+  const anyTasks = items.some((i) => i.type === 'task');
+  const counts = useMemo(() => {
+    const now = new Date();
+    const open = items.filter(isOpenTask);
+    return { overdue: open.filter((t) => groupOf(t, now) === 'overdue').length, today: open.filter((t) => groupOf(t, now) === 'today').length };
+  }, [items]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="flex items-center gap-3 text-title"><CheckCircle2 className="text-m-tasks" size={24} aria-hidden />Tasks</h1>
-        <button type="button" onClick={() => openEditor('new')} className="flex items-center gap-2 rounded-control bg-accent px-4 text-body font-semibold text-on-accent">
-          <Plus size={18} />New
-        </button>
-      </div>
+    <div>
+      <PageHeader eyebrow="Make progress visible" title="Tasks" subtitle="Small steps, clear priorities, fewer things to remember."
+        action={<button type="button" onClick={() => nav('/tasks/new')} className="btn btn-primary"><Plus size={18} aria-hidden />New task</button>} />
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Filters">
-        <Chip selected={freeTime} onClick={() => setFreeTime(!freeTime)}><Clock size={14} className="mr-1" />I have free time</Chip>
-        {PRI.map(([p, l]) => <Chip key={p} selected={priority === p} onClick={() => setPriority(priority === p ? null : p)}>{l}</Chip>)}
-        {categories.map((c) => <Chip key={c.id} selected={category === c.name} onClick={() => setCategory(category === c.name ? null : c.name)}>{c.name}</Chip>)}
-      </div>
-
-      {open.length === 0 ? (
-        tasks.some(isOpenTask) ? (
-          <p className="py-8 text-center text-body text-muted">No tasks match these filters.</p>
-        ) : (
-          <EmptyState icon={CheckCircle2} color="text-m-tasks" line="Tasks and reminders you need to act on go here." action="Add your first task" onAction={() => openEditor('new')} />
-        )
+      {!anyTasks ? (
+        <div className="panel"><EmptyState icon={ListChecks} line="Tasks and reminders you need to act on go here." action="Add your first task" onAction={() => nav('/tasks/new')} /></div>
       ) : (
-        groups.map((g) => (
-          <section key={g.key} aria-label={g.label}>
-            <h2 className={`mb-2 text-label uppercase ${g.key === 'overdue' ? 'text-overdue' : g.key === 'today' ? 'text-warning' : 'text-muted'}`}>
-              {g.label} <span className="num">· {g.items.length}</span>
-            </h2>
-            <div className="divide-y divide-border rounded-card border border-border bg-surface px-3">{g.items.map(row)}</div>
-          </section>
-        ))
-      )}
+        <>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[160px] flex-1">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" aria-hidden />
+              <input aria-label="Search tasks" className="input !pl-10" placeholder="Search tasks…" value={q} onChange={(e) => setQ(e.target.value)} />
+            </div>
+            {categories.length > 0 && (
+              <select aria-label="Category" className="input !w-auto" value={category} onChange={(e) => setCategory(e.target.value)}>
+                <option value="">All categories</option>
+                {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+              </select>
+            )}
+          </div>
+          <div className="-mx-page-x mb-4 flex gap-2 overflow-x-auto px-page-x pb-1" role="group" aria-label="Filters">
+            {FILTERS.map((f) => (
+              <Chip key={f.key} selected={filter === f.key} onClick={() => setFilter(f.key)}>
+                {f.label}{f.key === 'overdue' && counts.overdue > 0 && <span className="num text-overdue"> {counts.overdue}</span>}{f.key === 'today' && counts.today > 0 && <span className="num"> {counts.today}</span>}
+              </Chip>
+            ))}
+          </div>
 
-      {done.length > 0 && (
-        <section>
-          <button type="button" onClick={() => setShowDone(!showDone)} className="text-label uppercase text-muted">
-            {showDone ? 'Hide' : 'Show'} completed · <span className="num">{done.length}</span>
-          </button>
-          {showDone && <div className="mt-2 divide-y divide-border rounded-card border border-border bg-surface px-3">{done.map(row)}</div>}
-        </section>
+          {sections.length === 0 ? (
+            <p className="panel py-10 text-center text-body text-muted">{q || category ? 'No tasks match.' : filter === 'done' ? 'Nothing completed yet.' : 'Nothing here. Nice and clear.'}</p>
+          ) : (
+            <div className="space-y-4">
+              {sections.map((g) => (
+                <section key={g.key} aria-label={g.label} className="panel">
+                  {(filter === 'all' || filter === 'upcoming') && (
+                    <h2 className={`mb-3 text-label uppercase ${g.key === 'overdue' ? 'text-overdue' : 'text-faint'}`}>{g.label} <span className="num font-medium">· {g.items.length}</span></h2>
+                  )}
+                  {g.items.map((t) => <TaskRow key={t.id} item={t} extra={progress.get(t.id)} onToggle={toggle} onOpen={() => nav(`/tasks/${t.id}`)} />)}
+                </section>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

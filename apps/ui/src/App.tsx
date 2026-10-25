@@ -1,17 +1,18 @@
 import { useEffect } from 'react';
-import { HashRouter, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { applyTheme, useApp } from './store/app';
 import { Shell } from './components/Shell';
 import { LockScreen } from './components/LockScreen';
 import { BackHandler } from './components/BackHandler';
-import { Dashboard, ModulePage, VaultPage } from './pages/Pages';
+import { HomePage } from './pages/Home';
 import { TasksPage } from './pages/Tasks';
+import { TaskForm } from './pages/TaskForm';
 import { NotesPage } from './pages/Notes';
-import { LessonsPage } from './pages/Lessons';
-import { DevSeed } from './pages/DevSeed';
+import { JournalForm, JournalPage } from './pages/Journal';
+import { GoalForm, GoalsPage } from './pages/Goals';
 import { SettingsPage } from './pages/Settings';
+import { DevSeed } from './pages/DevSeed';
 import { DevComponents } from './pages/DevComponents';
-import { MODULES } from './modules';
 
 export default function App() {
   const { ready, locked, boot, theme } = useApp();
@@ -31,19 +32,23 @@ export default function App() {
       <BackHandler />
       <Routes>
         <Route element={<Shell />}>
-          <Route index element={<Dashboard />} />
-          {MODULES.filter((m) => m.type && m.key !== 'vault' && m.key !== 'tasks' && m.key !== 'notes' && m.key !== 'lessons').map((m) => (
-            <Route key={m.key} path={m.path} element={<ModulePage />} />
-          ))}
+          <Route index element={<HomePage />} />
           <Route path="/tasks" element={<TasksPage />} />
+          <Route path="/tasks/new" element={<TaskForm />} />
+          <Route path="/tasks/:id" element={<TaskForm />} />
           <Route path="/notes" element={<NotesPage />} />
           <Route path="/notes/:id" element={<NotesPage />} />
-          <Route path="/lessons" element={<LessonsPage />} />
-          <Route path="/lessons/:id" element={<LessonsPage />} />
-          <Route path="/vault" element={<VaultPage />} />
+          <Route path="/journal" element={<JournalPage />} />
+          <Route path="/journal/new" element={<JournalForm />} />
+          <Route path="/journal/:id" element={<JournalForm />} />
+          <Route path="/goals" element={<GoalsPage />} />
+          <Route path="/goals/new" element={<GoalForm />} />
+          <Route path="/goals/:id" element={<GoalForm />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/dev/seed" element={<DevSeed />} />
           <Route path="/dev/components" element={<DevComponents />} />
+          <Route path="/lessons/*" element={<Navigate to="/journal" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </HashRouter>

@@ -13,3 +13,5 @@ export * from './notes';
 export * from './lessons';
 export * from './seed';
 export * from './sample';
+export * from './goals';
+export * from './home';

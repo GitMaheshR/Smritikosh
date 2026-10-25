@@ -4,6 +4,7 @@ import { loadSampleData, removeSampleData } from './sample';
 import { listNotebooks, reviseList, titleFromBody, visibleNotes } from './notes';
 import { freeTimeTasks, groupTasks, pendingReminders } from './tasks';
 import { parseRRule } from './repeat';
+import { goalProgress, sortedGoals } from './goals';
 
 // Thursday 22 Oct 2026, 10:00
 const NOW = new Date(2026, 9, 22, 10, 0);
@@ -12,7 +13,7 @@ describe('sample data', () => {
   it('loads tasks, notes and lessons spread across every task group', async () => {
     const s = new MemoryStore();
     const r = await loadSampleData(s, NOW);
-    expect(r).toEqual({ tasks: 13, notes: 7, lessons: 3 });
+    expect(r).toEqual({ tasks: 13, notes: 7, lessons: 3, goals: 2 });
     const items = await s.listItems();
     const groups = groupTasks(items, NOW).map((g) => g.key);
     expect(groups).toEqual(['overdue', 'today', 'week', 'later', 'none']);
@@ -48,11 +49,21 @@ describe('sample data', () => {
     for (const n of notes) expect(titleFromBody(n.body)).toBe(n.title);
   });
 
+  it('adds two goals with milestones at 60% and 33%', async () => {
+    const s = new MemoryStore();
+    await loadSampleData(s, NOW);
+    const items = await s.listItems();
+    const goals = sortedGoals(items);
+    expect(goals).toHaveLength(2);
+    expect(goals.map((g) => goalProgress(items, g).percent).sort()).toEqual([33, 60]);
+    expect(goals.every((g) => !!g.due_at)).toBe(true);
+  });
+
   it('is idempotent: a second load adds nothing', async () => {
     const s = new MemoryStore();
     await loadSampleData(s, NOW);
     const before = (await s.listItems()).length;
-    expect(await loadSampleData(s, NOW)).toEqual({ tasks: 0, notes: 0, lessons: 0 });
+    expect(await loadSampleData(s, NOW)).toEqual({ tasks: 0, notes: 0, lessons: 0, goals: 0 });
     expect((await s.listItems()).length).toBe(before);
   });
 
@@ -61,7 +72,7 @@ describe('sample data', () => {
     const mine = await s.createItem({ type: 'task', title: 'My own task', status: 'todo' });
     await loadSampleData(s, NOW);
     const n = await removeSampleData(s);
-    expect(n).toBe(23);
+    expect(n).toBe(36);
     expect((await s.listItems()).map((i) => i.id)).toEqual([mine.id]);
     // can be loaded again after removal? the trashed rows are hidden, so yes
     expect((await loadSampleData(s, NOW)).tasks).toBe(13);

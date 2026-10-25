@@ -16,7 +16,7 @@ Single user. Full plan, data model and UI spec: docs/PLAN.md — read it before 
 ## Stack
 - pnpm workspaces monorepo, TypeScript strict everywhere.
 - packages/core: shared domain types, Zod schemas, SQL migrations, business logic
-  (repeat rules, weekend suggestions, goal progress, quick-add parser, search index). No platform imports.
+  (repeat rules, notes and notebooks, goal progress, home stats, quick-add parser, search index). No platform imports.
 - apps/ui: React 18 + Vite + Tailwind + shadcn/ui + Zustand + React Hook Form + React Router (hash router).
 - apps/desktop: Electron. better-sqlite3 in the MAIN process only; renderer talks via a typed
   contextBridge IPC API. contextIsolation on, nodeIntegration off, sandbox on. electron-builder -> NSIS installer.
@@ -28,25 +28,27 @@ Single user. Full plan, data model and UI spec: docs/PLAN.md — read it before 
 - IDs: UUID v7. Dates: ISO 8601 strings, stored in local time with the timezone in settings (default Asia/Kolkata).
 - Use current stable versions of all libraries; check docs if unsure rather than guessing APIs.
 
-## UI design system — "Quiet notebook" (full spec in docs/PLAN.md, section UI design and typography)
-- Original design. Do not copy the look of any existing app; no stock illustrations.
+## UI design system: "Daymark" (inspired by docs/design/daymark_ui_preview.html)
+- Original work. Calm, friendly, uncluttered; no stock illustrations.
 - Define ALL colours, fonts, sizes, radii and spacing as CSS variables in apps/ui/src/styles/tokens.css,
-  mapped into tailwind.config. Components use tokens only — no raw hex or px values in components.
-- Light and dark themes from the token table in PLAN.md; follow the system theme by default, override in Settings.
-- Fonts bundled via @fontsource (no Google Fonts link):
-  Plus Jakarta Sans 400/500/600/700 for the interface; Source Serif 4 400/600/italic for the optional
-  note reading mode; JetBrains Mono 400/500 for code, prices, percentages (tabular figures).
-- Type scale tokens: display 28/34 700, title 22/28 600, heading 17/24 600, body 15/22 400,
-  meta 13/18 500, label 12/16 600 uppercase +0.04em, mono 13/20. Sizes in rem so system font size scales them.
-- One accent (teal). Module colours only as dots and icons (Lucide icons, bundled).
-  Overdue = burnt orange, never red. Borders instead of shadows; shadows only on floating elements.
-- 4px spacing grid; card radius 12, inputs/buttons 10, chips full. Touch targets >= 44px.
-  Visible 2px accent focus ring. Motion 150-200ms, disabled under prefers-reduced-motion.
-- Phone (< 768px): bottom bar Home, Tasks, raised centre +, Notes, More. Windows (>= 768px): 240px
-  sidebar collapsing to 72px; >= 1100px list + detail split. Quick-add is a bottom sheet on phone and a
-  command bar on Windows (Ctrl+N); search uses the same bar (Ctrl+K).
-- Build shared components first (ItemRow, Card, Chip, ProgressBar, EmptyState, Sheet, CommandBar)
-  and add a hidden /dev/components page showing every component in both themes.
+  mapped into tailwind.config. Components use tokens only: no raw hex or px values in components.
+  Never override Tailwind's spacing scale (extend it), or classes like pl-10 silently stop working.
+- Palette: indigo primary (#3547A6), teal secondary (#287D78), cool off-white background (#F6F7FB), ink text (#202538),
+  white cards with 1px borders and almost no shadow. High / Medium / Low pills in warm red, amber and teal.
+  Overdue is a warm red-orange. A dark theme is derived from the same palette; follow the system by default,
+  override in Settings.
+- Fonts bundled via @fontsource (no Google Fonts link): Inter 400-800 for the interface, JetBrains Mono for code and
+  numbers, Source Serif 4 for the optional reading mode. Sizes in rem so the system font size scales them.
+  Body 14px, meta 12px, eyebrow label 11px uppercase teal, page title 24-30px extra bold, stat numbers 28px.
+- Radii: cards 20, tiles 16, controls 12, pills full. Touch targets >= 44px. Visible 3px focus ring.
+  Motion ~160ms, disabled under prefers-reduced-motion.
+- Layout: top bar (logo mark, name, tagline, search, + New). Sidebar card on >= 768px with Workspace (Home, Notes,
+  Tasks, Journal) and Personal (Goals, Settings) groups and an encouragement card. Phones: bottom bar Home, Tasks,
+  raised +, Notes, More (Journal, Goals, Settings). Detail screens and forms are full pages with a Back button
+  (and Android Back); the bottom bar hides on them. Quick-add is a bottom sheet / command bar (Ctrl+N), search Ctrl+K.
+- Every page: teal eyebrow, big title, one-line subtitle, primary action on the right.
+- Shared components live in components/ui.tsx (PageHeader, Card, StatCard, Chip, PriorityPill, ProgressBar, Checkbox,
+  TaskRow, EmptyState, FormRow, Sheet, CommandBar) and a hidden /dev/components page shows them in both themes.
 - Text contrast must meet WCAG AA in both themes.
 
 ## Quality bar

@@ -16,7 +16,11 @@ describe('parseQuickAdd', () => {
     expect(r).toMatchObject({ type: 'task', title: 'pay LIC premium', due_at: '2026-10-23T18:00', category: 'Bank', priority: 1, tags: [] });
   });
   it('unknown hashtags become tags', () => {
-    expect(parseQuickAdd('call Ravi #family', NOW, CATS).tags).toEqual(['family']);
+    // there are no tags: a #word that is not a category stays in the title
+    const r = parseQuickAdd('call Ravi #family', NOW, CATS);
+    expect(r).toMatchObject({ title: 'call Ravi #family', category: null, tags: [] });
+    // only the first matching category is used; the rest stay in the text
+    expect(parseQuickAdd('pay #bank #legal', NOW, CATS)).toMatchObject({ title: 'pay #legal', category: 'Bank' });
   });
   it('type prefix and plain title', () => {
     const r = parseQuickAdd('note: React hooks cheatsheet', NOW, CATS);

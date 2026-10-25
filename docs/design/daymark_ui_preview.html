@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal Life OS — UI Preview</title>
+<style>
+:root{--site-primary:#3547A6;--site-secondary:#287D78;--site-background:#F6F7FB;--site-on-primary:#FFFFFF;--site-on-secondary:#FFFFFF;--site-on-background:#202538;--site-font-body:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--site-font-heading:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--site-heading-scale:1;--site-spacing-scale:1;--site-radius-scale:1;--site-decoration-opacity:1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--site-background);color:var(--site-on-background);font-family:var(--site-font-body)}
+button,input{font:inherit}
+.app{min-height:100vh;background:var(--site-background);color:var(--site-on-background);padding:24px}
+.shell{max-width:1200px;margin:auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+.brand{display:flex;align-items:center;gap:12px}.mark{width:44px;height:44px;border-radius:15px;background:var(--site-primary);color:white;display:grid;place-items:center;font-size:22px;font-weight:800;box-shadow:0 8px 20px #3547a62b}
+.brand h1{font-size:calc(22px * var(--site-heading-scale));margin:0;letter-spacing:-.6px}.brand p{margin:3px 0 0;color:#687086;font-size:13px}
+.top-actions{display:flex;gap:10px;align-items:center}.iconbtn,.btn{border:1px solid #e2e5ef;background:white;color:#343b55;border-radius:12px;padding:10px 14px;cursor:pointer}.btn.primary{background:var(--site-primary);color:white;border-color:var(--site-primary)}button:focus-visible,input:focus-visible{outline:3px solid #9aa8ff;outline-offset:2px}
+.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px}
+.sidebar{background:white;border:1px solid #e8eaf2;border-radius:22px;padding:16px;height:fit-content;position:sticky;top:18px}
+.side-label{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:#8990a2;font-weight:750;padding:10px 12px}
+.nav{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:transparent;padding:12px;border-radius:12px;color:#5d657a;cursor:pointer;margin:2px 0}
+.nav .ico{width:24px;text-align:center;font-size:17px}.nav.active{background:#eef0ff;color:var(--site-primary);font-weight:750}
+.sidebar-note{margin-top:22px;padding:15px;border-radius:16px;background:#eff8f6}.sidebar-note strong{font-size:13px}.sidebar-note p{font-size:12px;line-height:1.5;color:#52716f;margin:6px 0 12px}
+.main{min-width:0}.welcome{display:flex;justify-content:space-between;align-items:end;gap:18px;margin:2px 0 22px}.eyebrow{color:var(--site-secondary);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.1px}.welcome h2{font-size:calc(30px * var(--site-heading-scale));letter-spacing:-1px;margin:5px 0}.welcome p{color:#687086;margin:0}.date-pill{white-space:nowrap;border:1px solid #e2e5ef;background:#fff;border-radius:13px;padding:11px 14px;color:#5d657a;font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}.stat{border:1px solid #e7e9f2;border-radius:18px;background:white;padding:17px;min-width:0}.stat-top{display:flex;justify-content:space-between;align-items:center;color:#687086;font-size:12px;font-weight:650}.stat-icon{width:34px;height:34px;border-radius:11px;background:#eef0ff;display:grid;place-items:center;color:var(--site-primary);font-size:17px}.stat-num{font-size:28px;font-weight:800;letter-spacing:-.8px;margin:12px 0 4px}.stat-foot{font-size:12px;color:#7a8295}.stat-foot.alert{color:#c45642}
+.content-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,.85fr);gap:16px}.panel{background:white;border:1px solid #e7e9f2;border-radius:20px;padding:19px;min-width:0}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}.panel-head h3{font-size:16px;margin:0;letter-spacing:-.2px}.textbtn{border:0;background:transparent;color:var(--site-primary);font-weight:750;cursor:pointer;padding:5px}
+.task{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:11px;align-items:start;padding:14px 0;border-top:1px solid #eff0f5}.task:first-of-type{border-top:0}.check{appearance:none;width:19px;height:19px;border:1.6px solid #b5bbca;border-radius:6px;cursor:pointer;margin:1px 0 0;display:grid;place-items:center}.check:checked{background:var(--site-secondary);border-color:var(--site-secondary)}.check:checked:after{content:"✓";color:white;font-size:13px;font-weight:800}.task-title{font-size:13px;font-weight:750;margin:0 0 5px}.task-title.done{text-decoration:line-through;color:#9399a8}.task-meta{font-size:11px;color:#7b8294;line-height:1.5}.priority{font-size:10px;font-weight:800;padding:5px 8px;border-radius:8px;white-space:nowrap}.high{background:#fff0ed;color:#b64e3e}.medium{background:#fff6df;color:#986b0c}.low{background:#eaf6f4;color:#28756e}
+.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.quick{border:1px solid #e7e9f2;border-radius:15px;background:#fff;text-align:left;padding:14px;cursor:pointer;transition:transform .15s,border-color .15s}.quick:hover{border-color:#aeb7ee;transform:translateY(-1px)}.quick .qicon{font-size:20px;margin-bottom:12px;display:block}.quick strong{display:block;font-size:13px}.quick small{display:block;color:#7b8294;font-size:11px;margin-top:5px}
+.note-list{margin-top:17px}.note{display:flex;gap:11px;padding:12px 0;border-top:1px solid #eff0f5;align-items:center}.note-symbol{width:37px;height:37px;border-radius:12px;background:#f1f3ff;display:grid;place-items:center;color:var(--site-primary);flex-shrink:0}.note strong{display:block;font-size:12px}.note small{display:block;font-size:11px;color:#7b8294;margin-top:4px}
+.progress-wrap{margin-top:20px}.progress-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:9px}.progress{height:8px;border-radius:10px;background:#edf0f5;overflow:hidden}.progress span{height:100%;width:62%;display:block;background:var(--site-secondary);border-radius:10px}.footer{font-size:11px;color:#858c9e;text-align:center;margin-top:22px}
+.view{display:none}.view.active{display:block}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}.search{flex:1;min-width:160px;border:1px solid #e2e5ef;border-radius:12px;padding:11px 13px;background:white;color:#202538}.filter{border:1px solid #e2e5ef;border-radius:12px;background:white;padding:10px 12px;color:#5d657a;cursor:pointer}.note-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.note-card{background:white;border:1px solid #e7e9f2;border-radius:17px;padding:16px}.note-card .tag{font-size:10px;font-weight:800;color:var(--site-secondary);text-transform:uppercase;letter-spacing:.7px}.note-card h3{font-size:15px;margin:9px 0 7px}.note-card p{font-size:12px;line-height:1.55;color:#687086;margin:0 0 14px}.note-card footer{font-size:11px;color:#8a91a2;border-top:1px solid #eff0f5;padding-top:10px}
+.formrow{display:grid;gap:6px;margin-bottom:13px}.formrow label{font-size:12px;font-weight:750;color:#5d657a}.formrow input,.formrow textarea,.formrow select{width:100%;padding:11px 12px;border:1px solid #dfe3ed;border-radius:11px;background:white;color:#202538}.formrow textarea{min-height:100px;resize:vertical}.form-actions{display:flex;justify-content:flex-end;gap:9px}
+.empty{padding:28px;text-align:center;color:#7b8294}.hidden{display:none!important}
+@media(max-width:850px){.app{padding:16px}.layout{grid-template-columns:1fr}.sidebar{position:static;display:flex;overflow-x:auto;gap:4px;padding:8px}.side-label,.sidebar-note{display:none}.nav{width:auto;white-space:nowrap;padding:10px}.content-grid{grid-template-columns:1fr}.welcome h2{font-size:25px}.stats{gap:8px}.stat{padding:12px}.stat-num{font-size:23px}}
+@media(max-width:520px){.app{padding:12px}.topbar{align-items:flex-start}.brand h1{font-size:19px}.brand p{font-size:11px}.top-actions .labelbtn{display:none}.welcome{align-items:flex-start;flex-direction:column}.date-pill{display:none}.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.stat-top{font-size:10px}.stat-icon{width:28px;height:28px}.stat-num{font-size:21px}.stat-foot{font-size:10px}.panel{padding:14px}.note-cards{grid-template-columns:1fr}.sidebar .nav{font-size:12px}.sidebar .ico{display:none}}
+</style>
+</head>
+<body>
+<div class="app" id="appRoot">
+<div class="shell">
+<header class="topbar">
+  <div class="brand"><div class="mark">✳</div><div><h1>Daymark</h1><p>Your personal space to think, plan, and grow</p></div></div>
+  <div class="top-actions"><button class="iconbtn" aria-label="Search" onclick="showView('notes')">⌕</button><button class="btn primary labelbtn" onclick="openTaskForm()">＋ New task</button></div>
+</header>
+<div class="layout">
+  <aside class="sidebar" aria-label="Main navigation">
+    <div class="side-label">Workspace</div>
+    <button class="nav active" data-view="home" onclick="showView('home')"><span class="ico">⌂</span>Home</button>
+    <button class="nav" data-view="notes" onclick="showView('notes')"><span class="ico">▤</span>Notes</button>
+    <button class="nav" data-view="tasks" onclick="showView('tasks')"><span class="ico">☑</span>Tasks</button>
+    <button class="nav" data-view="journal" onclick="showView('journal')"><span class="ico">✎</span>Journal</button>
+    <div class="side-label">Personal</div>
+    <button class="nav" data-view="goals" onclick="showView('goals')"><span class="ico">◉</span>Goals</button>
+    <button class="nav" data-view="settings" onclick="showView('settings')"><span class="ico">⚙</span>Settings</button>
+    <div class="sidebar-note"><strong>A little progress counts.</strong><p>Keep your next step small and your plans visible.</p><button class="btn" onclick="showView('tasks')">View my tasks →</button></div>
+  </aside>
+  <main class="main">
+    <section class="view active" id="view-home">
+      <div class="welcome"><div><div class="eyebrow">Thursday · Personal overview</div><h2>Make room for what matters.</h2><p>Here’s your day at a glance. Start with one meaningful step.</p></div><div class="date-pill">◷ &nbsp; Today · Oct 22</div></div>
+      <div class="stats">
+        <div class="stat"><div class="stat-top">Open tasks <span class="stat-icon">☑</span></div><div class="stat-num" id="openCount">7</div><div class="stat-foot">Across your personal lists</div></div>
+        <div class="stat"><div class="stat-top">Due today <span class="stat-icon">◷</span></div><div class="stat-num" id="dueCount">3</div><div class="stat-foot">Keep an eye on these</div></div>
+        <div class="stat"><div class="stat-top">Overdue <span class="stat-icon">!</span></div><div class="stat-num">1</div><div class="stat-foot alert">Worth rescheduling</div></div>
+      </div>
+      <div class="content-grid">
+        <section class="panel"><div class="panel-head"><h3>Today’s focus</h3><button class="textbtn" onclick="showView('tasks')">All tasks ↗</button></div>
+          <div id="homeTasks">
+            <div class="task"><input class="check" type="checkbox" onchange="completeTask(this)"><div><p class="task-title">Apply for PAN card</p><div class="task-meta">Personal · Today, 5:00 PM</div></div><span class="priority high">High</span></div>
+            <div class="task"><input class="check" type="checkbox" onchange="completeTask(this)"><div><p class="task-title">Review project notes</p><div class="task-meta">Work · Today, 6:30 PM</div></div><span class="priority medium">Medium</span></div>
+            <div class="task"><input class="check" type="checkbox" onchange="completeTask(this)"><div><p class="task-title">Read 10 pages</p><div class="task-meta">Learning · Today, 9:00 PM</div></div><span class="priority low">Low</span></div>
+          </div>
+          <button class="btn" onclick="openTaskForm()">＋ Add a task</button>
+          <div class="progress-wrap"><div class="progress-label"><span>Today’s progress</span><strong id="progressText">0 of 3 complete</strong></div><div class="progress"><span id="progressBar" style="width:0%"></span></div></div>
+        </section>
+        <section class="panel"><div class="panel-head"><h3>Quick capture</h3><span style="font-size:12px;color:#8a91a2">Save it before you forget</span></div>
+          <div class="quick-grid">
+            <button class="quick" onclick="openNoteForm()"><span class="qicon">✎</span><strong>Write a note</strong><small>Capture an idea</small></button>
+            <button class="quick" onclick="openTaskForm()"><span class="qicon">☑</span><strong>Add a task</strong><small>Plan your next step</small></button>
+            <button class="quick" onclick="showView('journal')"><span class="qicon">↗</span><strong>Log a lesson</strong><small>Learn from today</small></button>
+            <button class="quick" onclick="showView('goals')"><span class="qicon">◎</span><strong>Check a goal</strong><small>See your progress</small></button>
+          </div>
+          <div class="panel-head" style="margin-top:22px;margin-bottom:4px"><h3>Recently captured</h3><button class="textbtn" onclick="showView('notes')">Browse ↗</button></div>
+          <div class="note-list" id="recentNotes"><div class="note"><div class="note-symbol">✧</div><div><strong>Ideas for my personal app</strong><small>Ideas · Updated yesterday</small></div></div><div class="note"><div class="note-symbol">⌁</div><div><strong>What I learned this week</strong><small>Journal · Oct 20</small></div></div></div>
+        </section>
+      </div>
+    </section>
+    <section class="view" id="view-notes">
+      <div class="welcome"><div><div class="eyebrow">Your thinking space</div><h2>Notes library</h2><p>Collect ideas, keep context, find them when you need them.</p></div><button class="btn primary" onclick="openNoteForm()">＋ New note</button></div>
+      <div class="toolbar"><input class="search" id="noteSearch" placeholder="Search your notes…" oninput="filterNotes()"><button class="filter" onclick="filterCategory('All')">All notes</button><button class="filter" onclick="filterCategory('Ideas')">Ideas</button><button class="filter" onclick="filterCategory('Learning')">Learning</button></div>
+      <div class="note-cards" id="noteCards">
+        <article class="note-card" data-category="Ideas"><span class="tag">Ideas · Favorite</span><h3>Ideas for my personal app</h3><p>Keep notes, tasks, and lessons connected so I can find context later.</p><footer>Updated yesterday · 3 tags</footer></article>
+        <article class="note-card" data-category="Learning"><span class="tag">Learning</span><h3>React Native learning path</h3><p>Build one screen at a time, understand the data flow, and test on a device.</p><footer>Updated Oct 20 · 2 tags</footer></article>
+        <article class="note-card" data-category="Personal"><span class="tag">Personal</span><h3>Things to sort this month</h3><p>Review documents, renew insurance, and make time for personal admin.</p><footer>Updated Oct 18 · 4 tags</footer></article>
+        <article class="note-card" data-category="Journal"><span class="tag">Journal</span><h3>What I learned this week</h3><p>Write down what worked, what did not, and what I would change next time.</p><footer>Updated Oct 20 · 1 tag</footer></article>
+      </div>
+    </section>
+    <section class="view" id="view-tasks">
+      <div class="welcome"><div><div class="eyebrow">Make progress visible</div><h2>Tasks</h2><p>Small steps, clear priorities, fewer things to remember.</p></div><button class="btn primary" onclick="openTaskForm()">＋ New task</button></div>
+      <div class="toolbar"><input class="search" id="taskSearch" placeholder="Search tasks…" oninput="filterTasks()"><button class="filter" onclick="taskFilter('All')">All</button><button class="filter" onclick="taskFilter('Today')">Today</button><button class="filter" onclick="taskFilter('Completed')">Completed</button></div>
+      <div class="panel" id="taskList">
+        <div class="task" data-title="Apply for PAN card" data-status="Open"><input class="check" type="checkbox" onchange="completeTask(this)"><div><p class="task-title">Apply for PAN card</p><div class="task-meta">Personal · Today, 5:00 PM</div></div><span class="priority high">High</span></div>
+        <div class="task" data-title="Review project notes" data-status="Open"><input class="check" type="checkbox" onchange="completeTask(this)"><div><p class="task-title">Review project notes</p><div class="task-meta">Work · Today, 6:30 PM</div></div><span class="priority medium">Medium</span></div>
+        <div class="task" data-title="Read 10 pages" data-status="Open"><input class="check" type="checkbox" onchange="completeTask(this)"><div><p class="task-title">Read 10 pages</p><div class="task-meta">Learning · Today, 9:00 PM</div></div><span class="priority low">Low</span></div>
+        <div class="task" data-title="Renew car insurance" data-status="Open"><input class="check" type="checkbox" onchange="completeTask(this)"><div><p class="task-title">Renew car insurance</p><div class="task-meta">Personal · Oct 25</div></div><span class="priority high">High</span></div>
+      </div>
+    </section>
+    <section class="view" id="view-journal">
+      <div class="welcome"><div><div class="eyebrow">Reflect & remember</div><h2>Journal & lessons</h2><p>Keep the lesson, not just the memory.</p></div><button class="btn primary" onclick="openJournalForm()">＋ Journal entry</button></div>
+      <div class="panel"><div class="panel-head"><h3>Recent reflections</h3><span class="priority low">Private space</span></div><div id="journalEntries"><article class="note-card" style="margin-bottom:12px"><span class="tag">Learning · Oct 20</span><h3>What I learned this week</h3><p><b>What happened:</b> Breaking a large task into smaller steps made it easier to begin.</p><p><b>Lesson:</b> Define the next concrete action before starting.</p></article><article class="note-card"><span class="tag">Personal · Oct 16</span><h3>A useful reminder</h3><p><b>Next time:</b> Capture important follow-ups immediately instead of relying on memory.</p></article></div></div>
+    </section>
+    <section class="view" id="view-goals">
+      <div class="welcome"><div><div class="eyebrow">Longer-term direction</div><h2>Goals & milestones</h2><p>Connect the everyday work to what matters over time.</p></div><button class="btn primary" onclick="addGoal()">＋ New goal</button></div>
+      <div class="panel" id="goalsPanel"><div class="panel-head"><h3>Active goals</h3><span style="font-size:12px;color:#7b8294">Illustrative progress</span></div><div style="padding:12px 0;border-bottom:1px solid #eff0f5"><div class="progress-label"><strong>Build a consistent learning habit</strong><span>60%</span></div><div class="progress"><span style="width:60%"></span></div><small style="display:block;color:#7b8294;margin-top:8px">Milestone: 3 of 5 learning sessions completed</small></div><div style="padding:18px 0 5px"><div class="progress-label"><strong>Organize personal documents</strong><span>35%</span></div><div class="progress"><span style="width:35%;background:#3547A6"></span></div><small style="display:block;color:#7b8294;margin-top:8px">Milestone: Review and list documents to prepare</small></div></div>
+    </section>
+    <section class="view" id="view-settings">
+      <div class="welcome"><div><div class="eyebrow">Your app, your data</div><h2>Settings & data</h2><p>Keep your workspace useful and your information portable.</p></div></div>
+      <div class="panel"><div class="panel-head"><h3>Data tools</h3></div><p style="font-size:13px;color:#687086;line-height:1.6">This visual prototype uses sample data in your browser session. A production app should add SQLite persistence, database migrations, and tested backup/restore flows.</p><button class="btn" onclick="exportData()">Export sample data (JSON)</button><button class="btn" style="margin-left:8px" onclick="alert('Theme settings can be added in the implementation phase.')">Appearance preferences</button><div class="progress-wrap"><div class="panel-head"><h3>Security note</h3></div><p style="font-size:13px;color:#687086;line-height:1.6">A future password vault should use encryption and Android-protected key storage. Never store credentials as plain text in notes.</p></div></div>
+    </section>
+    <section class="view" id="view-form">
+      <div class="welcome"><div><div class="eyebrow">Quick capture</div><h2 id="formHeading">Create something</h2><p id="formSubtitle">Get it out of your head and into your workspace.</p></div><button class="btn" onclick="showView('home')">Cancel</button></div>
+      <div class="panel"><form id="createForm" onsubmit="saveForm(event)"><div class="formrow"><label for="entryTitle">Title</label><input id="entryTitle" required maxlength="120" placeholder="Give it a clear name"></div><div class="formrow" id="categoryRow"><label for="entryCategory">Category</label><select id="entryCategory"><option>Personal</option><option>Work</option><option>Ideas</option><option>Learning</option><option>Finance</option><option>Experiences</option></select></div><div class="formrow" id="priorityRow"><label for="entryPriority">Priority</label><select id="entryPriority"><option>Medium</option><option>High</option><option>Low</option></select></div><div class="formrow" id="dateRow"><label for="entryDate">Due date (optional)</label><input id="entryDate" type="date"></div><div class="formrow"><label for="entryContent">Details</label><textarea id="entryContent" placeholder="Add context, next steps, or what you learned…"></textarea></div><div class="form-actions"><button type="button" class="btn" onclick="showView('home')">Cancel</button><button class="btn primary" type="submit">Save entry</button></div></form></div>
+    </section>
+  </main>
+</div>
+<div class="footer">Daymark · UI concept preview · Sample content only · Not connected to a database</div>
+</div>
+</div>
+<script>
+let currentForm='note'; let activeCategory='All';
+function showView(name){
+ document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+ const target=document.getElementById('view-'+name); if(target)target.classList.add('active');
+ document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===name));
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+function openTaskForm(){currentForm='task';setupForm('New task','Capture a next step. You can refine the details later.');showView('form')}
+function openNoteForm(){currentForm='note';setupForm('New note','Save an idea, a useful detail, or something to remember.');showView('form')}
+function openJournalForm(){currentForm='journal';setupForm('New journal entry','Record what happened and what you want to learn from it.');showView('form')}
+function setupForm(typeTitle,subtitle){
+ document.getElementById('formHeading').textContent=typeTitle;document.getElementById('formSubtitle').textContent=subtitle;
+ document.getElementById('priorityRow').classList.toggle('hidden',currentForm!=='task');
+ document.getElementById('dateRow').classList.toggle('hidden',currentForm!=='task');
+ document.getElementById('categoryRow').classList.toggle('hidden',currentForm==='task');
+ document.getElementById('createForm').reset();
+}
+function saveForm(e){
+ e.preventDefault();const title=document.getElementById('entryTitle').value.trim();const content=document.getElementById('entryContent').value.trim();
+ if(!title)return;
+ if(currentForm==='task'){
+  const priority=document.getElementById('entryPriority').value;const date=document.getElementById('entryDate').value;
+  const row=document.createElement('div');row.className='task';row.dataset.title=title;row.dataset.status='Open';
+  const check=document.createElement('input');check.type='checkbox';check.className='check';check.onchange=function(){completeTask(this)};
+  const body=document.createElement('div');const t=document.createElement('p');t.className='task-title';t.textContent=title;const meta=document.createElement('div');meta.className='task-meta';meta.textContent='Personal · '+(date||'No due date');body.append(t,meta);
+  const badge=document.createElement('span');badge.className='priority '+priority.toLowerCase();badge.textContent=priority;row.append(check,body,badge);document.getElementById('taskList').prepend(row);
+  document.getElementById('homeTasks').prepend(row.cloneNode(true));document.getElementById('openCount').textContent=Number(document.getElementById('openCount').textContent)+1;showView('tasks');filterTasks();
+ }else if(currentForm==='note'){
+  const category=document.getElementById('entryCategory').value;const card=document.createElement('article');card.className='note-card';card.dataset.category=category;
+  const tag=document.createElement('span');tag.className='tag';tag.textContent=category;const h=document.createElement('h3');h.textContent=title;const p=document.createElement('p');p.textContent=content||'No additional details yet.';const foot=document.createElement('footer');foot.textContent='Just now';card.append(tag,h,p,foot);document.getElementById('noteCards').prepend(card);filterNotes();showView('notes');
+ }else{
+  const card=document.createElement('article');card.className='note-card';card.style.marginBottom='12px';const tag=document.createElement('span');tag.className='tag';tag.textContent='Journal · Just now';const h=document.createElement('h3');h.textContent=title;const p=document.createElement('p');p.textContent=content||'No reflection added yet.';card.append(tag,h,p);document.getElementById('journalEntries').prepend(card);showView('journal');
+ }
+}
+function completeTask(input){
+ const row=input.closest('.task');if(!row)return;const title=row.querySelector('.task-title');if(input.checked){title.classList.add('done');row.dataset.status='Completed'}else{title.classList.remove('done');row.dataset.status='Open'}
+ const homeChecks=[...document.querySelectorAll('#homeTasks .check')];const checked=homeChecks.filter(c=>c.checked).length;document.getElementById('progressText').textContent=checked+' of '+homeChecks.length+' complete';document.getElementById('progressBar').style.width=(homeChecks.length?checked/homeChecks.length*100:0)+'%';
+ const open=[...document.querySelectorAll('#taskList .task')].filter(r=>r.dataset.status!=='Completed').length;document.getElementById('openCount').textContent=open;
+}
+function filterNotes(){
+ const q=(document.getElementById('noteSearch')?.value||'').toLowerCase();
+ document.querySelectorAll('#noteCards .note-card').forEach(c=>{const match=c.innerText.toLowerCase().includes(q);const cat=activeCategory==='All'||c.dataset.category===activeCategory;c.classList.toggle('hidden',!(match&&cat))});
+}
+function filterCategory(cat){activeCategory=cat;filterNotes()}
+function filterTasks(){
+ const q=(document.getElementById('taskSearch')?.value||'').toLowerCase();
+ document.querySelectorAll('#taskList .task').forEach(r=>r.classList.toggle('hidden',!r.innerText.toLowerCase().includes(q)));
+}
+function taskFilter(which){
+ document.querySelectorAll('#taskList .task').forEach(r=>{let show=true;if(which==='Completed')show=r.dataset.status==='Completed';else if(which==='Today')show=r.innerText.includes('Today');r.classList.toggle('hidden',!show)});
+}
+function addGoal(){const title=prompt('What goal would you like to track?');if(!title||!title.trim())return;const wrap=document.createElement('div');wrap.style.padding='16px 0';wrap.style.borderTop='1px solid #eff0f5';const label=document.createElement('strong');label.textContent=title.trim();label.style.fontSize='13px';const msg=document.createElement('p');msg.textContent='New goal · Set milestones when the full app is implemented';msg.style.cssText='font-size:12px;color:#7b8294';wrap.append(label,msg);document.getElementById('goalsPanel').append(wrap)}
+function exportData(){
+ const data={app:'Daymark',type:'UI prototype sample export',notes:[...document.querySelectorAll('#noteCards .note-card')].map(c=>({category:c.dataset.category,title:c.querySelector('h3')?.textContent,content:c.querySelector('p')?.textContent})),tasks:[...document.querySelectorAll('#taskList .task')].map(r=>({title:r.dataset.title,status:r.dataset.status,details:r.querySelector('.task-meta')?.textContent}))};
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='daymark-sample-data.json';a.click();URL.revokeObjectURL(url)
+}
+</script>
+</body>
+</html>

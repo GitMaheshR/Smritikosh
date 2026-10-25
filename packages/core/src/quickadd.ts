@@ -44,12 +44,13 @@ export function parseQuickAdd(input: string, now: Date = new Date(), categories:
   });
 
   let category: string | null = null;
+  // The app has no tags: #word is a category only when it names one, otherwise it stays in the text.
   const tags: string[] = [];
   const catMap = new Map(categories.map((c) => [c.toLowerCase(), c]));
-  text = text.replace(/(^|\s)#([\p{L}\p{N}_-]+)/gu, (_m, sp: string, w: string) => {
+  text = text.replace(/(^|\s)#([\p{L}\p{N}_-]+)/gu, (m, sp: string, w: string) => {
     const cat = catMap.get(w.toLowerCase());
-    if (cat && !category) category = cat;
-    else if (!tags.includes(w.toLowerCase())) tags.push(w.toLowerCase());
+    if (!cat || category) return m;
+    category = cat;
     return sp;
   });
 

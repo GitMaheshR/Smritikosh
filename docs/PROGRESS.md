@@ -1,5 +1,65 @@
 # Smritikosh — progress
 
+## Categories instead of tags (2026-10-25)
+Tags are gone from every screen; categories replace them, in two separate lists managed in Settings.
+- **Task categories** (Settings > Task categories): the Category dropdown on the task form and the filter on the Tasks screen.
+  Add, rename, delete, with a count of tasks using each. Deleting one keeps its tasks, just without a category.
+- **Note categories** (Settings > Note categories): the former notebooks, now a Category dropdown in each note's ⋯ menu ("New
+  category…" is there too) and the filter chips on the Notes screen. Separate list from task categories. Same add / rename / delete.
+  Stored as before (`meta.notebook`, list in setting `notebooks`), so existing notes kept their category; the long names created by
+  the old-tree migration ("Tech interviews / React") can be renamed in Settings.
+- Removed: the Tags card in Settings, tag fields in the note menu and the journal form, `#tag` chips and counts everywhere. Quick-add
+  `#word` is now a category only when it names a task category; otherwise it stays in the text. Sample data no longer creates tags.
+  Tags already stored on old items are left in the database but not shown.
+- Checked in the browser (add, duplicate blocked, rename, delete for both lists; setting a note's category) and on the phone
+  (Settings lists). 69 core + 15 UI tests, typecheck, installer and APK build.
+- Not done: reordering categories; the note's Category dropdown on the phone was not tapped through.
+
+## Daymark redesign (2026-10-25)
+The look and layout of the whole app were rebuilt from the Daymark prototype (`docs/design/daymark_ui_preview.html`),
+because the earlier "Quiet notebook" design was not liked. Data, reminders, repeat rules, checklists, notes migration, the PIN
+lock, Back handling and sample data are unchanged underneath.
+
+### Design
+- Tokens (`apps/ui/src/styles/tokens.css`): indigo primary, teal secondary, cool off-white background, Inter (bundled), 20px cards,
+  tinted chips and High / Medium / Low pills; a dark theme derived from the same palette. Tailwind's spacing scale is no longer
+  replaced (only extended), which removes the class of bug behind the earlier search-box overlap.
+- Shell: top bar (logo mark, name, tagline, search, + New), sidebar card on >= 768px (Workspace: Home, Notes, Tasks, Journal.
+  Personal: Goals, Settings, plus an encouragement card), phone bottom bar (Home, Tasks, +, Notes, More).
+- Every page: teal eyebrow, big title, subtitle, action on the right. Forms are full pages with Back / Cancel.
+
+### Screens
+- **Home:** date eyebrow and headline, stat cards (open, due today, overdue), Today's focus with progress bar, Quick capture
+  tiles, Recently captured, "missed while closed" banner.
+- **Tasks:** search, filters (All, Today, Overdue, Upcoming, Free time, Completed), category select, grouped list with priority
+  pills. Full-page task form with "More options" (reminder, repeat, estimate, free time, checklist).
+- **Notes:** card library with notebook filter chips; note page keeps Read / Edit, checklists, menu.
+- **Journal:** the former Lessons: "Before you start…" search, reflection cards, full-page entry form (`/journal`; `/lessons` redirects).
+- **Goals (new):** goals with milestones, progress bars, target date and status; goal page with tick-able milestones.
+  Core: `goals.ts` (progress, ordering, target-date labels), `home.ts` (stats, today's focus, recently captured).
+- **Settings:** Appearance, Reminders, App lock, Categories, Tags, Sample data (now includes 2 goals), About.
+- Wishlists, Weekend, Stocks and Vault are not in the menu (Daymark does not include them); their item types are untouched.
+
+### Tests / builds
+- 69 core tests (new: goals, home helpers, sample goals) and 15 UI tests. Typecheck, UI build, Windows installer and debug APK pass.
+- Browser (phone and desktop sizes, light and dark): Home, Tasks, task form, Notes, a note, Journal, Goals, a goal (ticking a
+  milestone moved progress 60% to 80%), Settings; completing a task updated the stat cards and progress bar and offered Undo;
+  quick-add parsed "buy milk tomorrow 6pm !high" and created the task.
+
+### On the phone (Moto G82 5G, 2026-10-25)
+Installed over the old build with data kept (database backed up first). Checked by screenshot and taps, in the phone's dark theme:
+Home (stat cards, focus list, bottom bar), Notes library (cards, notebook chips), a note in Read and Edit mode (formatting bar sits
+above the keyboard), Tasks (filters, grouped list, priority pills), quick-add sheet above the keyboard, More menu, Goals, Journal list
+and entry form. **Android Back works:** from a note it returns to the library, it closes the More sheet and the quick-add sheet first,
+and it leaves the app only after stepping back through every earlier screen (4 presses in the test).
+- Found and fixed on the phone: "Updated 22 oct" (month in lowercase); now "Updated Oct 22", with only "today" / "yesterday" lowercase.
+
+### Not verified
+- Search overlay, reminder prompt, PIN lock screen and the light theme in the new style were not looked at on the phone.
+- The phone shows older sample data and two goals typed in earlier; new goals sample data needs a remove-and-add of sample data.
+- Sample data already on a device has no goals; use Settings > Remove sample data, then Add sample data again.
+- Windows installer built, not run. Export and backup (Phase 6) still to do.
+
 ## Notes redesign + Back button (2026-10-22, after Phase 3)
 Notes felt too complex (Subject → Topic → Note, many controls). Replaced with notebooks and tags (plan "B").
 

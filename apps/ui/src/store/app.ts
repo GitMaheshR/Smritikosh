@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import {
-  LessonIndex, NOTEBOOKS_SETTING, SearchIndex, completeTask, hasNotebook, hashPin, isBlankNote, isOpenTask,
+  LessonIndex, NOTEBOOKS_SETTING, isMilestone, milestonesOf, SearchIndex, completeTask, hasNotebook, hashPin, isBlankNote, isOpenTask,
   missedReminders, normalizeNotebookName, notebookOf, parseNotebookList, pendingReminders, removeFromList,
   renameInList, runNotesMigration, snoozeTime, toLocalIso, verifyPin, withNotebook,
   type Category, type ChecklistEntry, type DataStore, type Item, type Notifier, type ReminderEvent, type SnoozeKind, type Tag,
@@ -35,7 +35,6 @@ interface AppState {
   /** Reminders that came due while the app was closed. */
   missed: Item[];
   toast: Toast | null;
-  editingId: string | null;
   boot(): Promise<void>;
   /** reschedule=false for high-frequency saves (autosave) that cannot change reminders. */
   refresh(reschedule?: boolean): Promise<void>;
@@ -49,14 +48,17 @@ interface AppState {
   addNotebook(name: string): Promise<string | null>;
   renameNotebook(from: string, to: string): Promise<boolean>;
   deleteNotebook(name: string): Promise<void>;
+  /** Deletes a task category; tasks that used it keep working, just without a category. Returns how many tasks changed. */
+  deleteTaskCategory(id: string): Promise<number>;
   openQuickAdd(v: boolean): void;
   openSearch(v: boolean): void;
-  openEditor(id: string | null): void;
   showToast(message: string, undo?: Toast['undo']): void;
   complete(item: Item): Promise<void>;
   reopen(item: Item): Promise<void>;
   snooze(id: string, kind: SnoozeKind): Promise<void>;
   removeWithUndo(item: Item): Promise<void>;
+  /** Creates an empty note (hidden until typed into) and returns its id. */
+  newNote(notebook?: string | null): Promise<string>;
   dismissPrompt(id: string): void;
   dismissMissed(): void;
   handleReminder(e: ReminderEvent): Promise<void>;
@@ -74,7 +76,7 @@ export function applyTheme(t: Theme) {
 export const useApp = create<AppState>((set, get) => ({
   ready: false, store: null, notifier: null, items: [], tags: [], categories: [], checklist: [], search, lessons,
   readingMode: false, notebooks: [], notesView: { q: '', filter: 'all' }, pinHash: null, locked: false, theme: 'system', quickAddOpen: false, searchOpen: false,
-  prompts: [], missed: [], toast: null, editingId: null,
+  prompts: [], missed: [], toast: null,
 
   async boot() {
     const store = await createStore();
@@ -184,9 +186,19 @@ export const useApp = create<AppState>((set, get) => ({
     await get().refresh(false);
   },
 
+  async deleteTaskCategory(id) {
+    const { store, categories, items } = get();
+    const c = categories.find((x) => x.id === id);
+    if (!c) return 0;
+    const affected = items.filter((i) => i.type === 'task' && i.category === c.name);
+    for (const t of affected) await store!.updateItem(t.id, { category: null });
+    await store!.deleteCategory(id);
+    await get().refresh(false);
+    return affected.length;
+  },
+
   openQuickAdd: (v) => set({ quickAddOpen: v, searchOpen: false }),
   openSearch: (v) => set({ searchOpen: v, quickAddOpen: false }),
-  openEditor: (id) => set({ editingId: id }),
 
   showToast(message, undo) {
     const id = ++toastSeq;
@@ -228,12 +240,20 @@ export const useApp = create<AppState>((set, get) => ({
 
   async removeWithUndo(item) {
     const s = get().store!;
-    await s.deleteItem(item.id);
+    // A goal takes its milestones with it; Undo brings them all back.
+    const ids = item.type === 'goal' && !isMilestone(item) ? [item.id, ...milestonesOf(get().items, item.id).map((m) => m.id)] : [item.id];
+    for (const id of ids) await s.deleteItem(id);
     await get().refresh();
     get().showToast(`Deleted "${item.title}"`, async () => {
-      await s.restoreItem(item.id);
+      for (const id of ids) await s.restoreItem(id);
       await get().refresh();
     });
+  },
+
+  async newNote(notebook) {
+    const it = await get().store!.createItem({ type: 'note', title: 'Untitled', body: '', meta: notebook ? { notebook } : {} });
+    await get().refresh(false); // so the editor finds it before we navigate
+    return it.id;
   },
 
   dismissPrompt: (id) => set({ prompts: get().prompts.filter((p) => p !== id) }),

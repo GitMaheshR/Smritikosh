@@ -1,6 +1,47 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "ui", "runtimeExecutable": "pnpm", "runtimeArgs": ["dev:ui", "--port", "5173"], "port": 5173 }
+    {
+      "name": "ui",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev:ui",
+        "--port",
+        "5173"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "ui-gate",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@smritikosh/ui",
+        "exec",
+        "vite",
+        "--mode",
+        "licensetest",
+        "--port",
+        "5174"
+      ],
+      "port": 5174
+    },
+    {
+      "name": "ui-gate-prod",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@smritikosh/ui",
+        "exec",
+        "vite",
+        "preview",
+        "--outDir",
+        "dist-gate",
+        "--port",
+        "5175",
+        "--strictPort"
+      ],
+      "port": 5175
+    }
   ]
 }

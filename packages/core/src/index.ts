@@ -3,6 +3,7 @@ export * from './uuid';
 export * from './datastore';
 export * from './migrations';
 export * from './pin';
+export * from './license';
 export * from './quickadd';
 export * from './search';
 export * from './memory-store';

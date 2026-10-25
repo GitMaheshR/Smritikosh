@@ -11,6 +11,11 @@
     "dev:desktop": "pnpm --filter @smritikosh/desktop dev",
     "dist:desktop": "pnpm --filter @smritikosh/desktop dist",
     "sync:mobile": "pnpm --filter @smritikosh/mobile sync",
-    "apk:debug": "pnpm --filter @smritikosh/mobile apk"
+    "apk:debug": "pnpm --filter @smritikosh/mobile apk",
+    "license:keygen": "node scripts/license-keygen.mjs",
+    "license:tool": "node scripts/build-license-tool.mjs",
+    "icons": "apps/desktop/node_modules/.bin/electron scripts/make-icons.cjs",
+    "apk:create-key": "powershell -NoProfile -STA -ExecutionPolicy Bypass -File scripts/create-release-key.ps1",
+    "apk:release": "powershell -NoProfile -STA -ExecutionPolicy Bypass -File scripts/build-release.ps1"
   }
 }

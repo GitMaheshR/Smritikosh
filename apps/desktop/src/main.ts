@@ -1,5 +1,9 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeImage, Notification, Tray } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs';
+import { execFile } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { promisify } from 'node:util';
 import { DatabaseSync } from 'node:sqlite';
 import { SqlStore, type SqlDriver } from '@smritikosh/core';
 import { APP_ICON_DATA_URL, TRAY_ICON_DATA_URL } from './trayIcon';
@@ -27,6 +31,25 @@ const ALLOWED = new Set([
   'deleteCategory', 'listChecklist', 'listAllChecklist', 'addChecklist', 'updateChecklist', 'deleteChecklist',
   'copyChecklist', 'getSetting', 'setSetting',
 ]);
+
+// ---- Device ID --------------------------------------------------------------------------------
+// The raw machine identifier behind the Device ID shown on the activation screen (the app only ever hashes it).
+// Windows: the MachineGuid; if that cannot be read, a random ID kept in the app's data folder.
+async function machineId(): Promise<string> {
+  try {
+    const { stdout } = await promisify(execFile)('reg', ['query', 'HKLM\\SOFTWARE\\Microsoft\\Cryptography', '/v', 'MachineGuid'], { windowsHide: true });
+    const m = /MachineGuid\s+REG_SZ\s+(\S+)/.exec(stdout);
+    if (m?.[1]) return m[1];
+  } catch { /* fall through */ }
+  const file = path.join(app.getPath('userData'), 'device-id.txt');
+  try {
+    const existing = fs.readFileSync(file, 'utf8').trim();
+    if (existing) return existing;
+  } catch { /* first run */ }
+  const id = randomUUID();
+  fs.writeFileSync(file, id);
+  return id;
+}
 
 // ---- Reminder scheduler -------------------------------------------------------------------------
 // One ticker instead of long setTimeouts (which overflow after ~24 days and drift across sleep).
@@ -105,6 +128,7 @@ if (!app.requestSingleInstanceLock()) {
       if (!ALLOWED.has(method)) throw new Error(`Unknown store method: ${method}`);
       return (store as unknown as Record<string, (...a: unknown[]) => unknown>)[method]!(...(args ?? []));
     });
+    ipcMain.handle('device:id', () => machineId());
     ipcMain.handle('notifier:permission', () => Notification.isSupported());
     ipcMain.handle('notifier:reschedule', (_e, entries: { id: string; title: string; at: string }[]) => {
       const next = new Map<string, Reminder>();

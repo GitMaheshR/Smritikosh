@@ -1,5 +1,36 @@
 # Smritikosh — progress
 
+## Faster first launch of the signed APK (2026-10-25)
+Reported: the signed app was slow to show its screen. Likely cause (not measured on the phone, because the release build blocks screenshots and
+debugging): on the first launch after activation the app saved about 60 sample items one database call at a time, with the screen waiting.
+- The sample data is now loaded **after** the screen is showing, with a "Setting up your sample data…" message.
+- It is saved in **one transaction** on Android (`SqlStore.bulk`, `inBulk` in `platform/index.ts`): all or nothing, one commit instead of hundreds.
+- Loading a single item no longer reads every tag in the database, and new items without tags skip a pointless delete.
+- New tests run the real SQL (node:sqlite) for the first time: schema, sample + study data equal to the in-memory store, tags, removal (`sql-store.test.ts`).
+- The production bundle grew only about 60 KB with the scrambling, so it is not the cause of slow loading.
+- Not measured on the phone. If it is still slow, say which screen (the activation screen, or after activating) so it can be timed.
+
+## Security and signed release (2026-10-25)
+Modelled on the Civentral app (see `docs/SECURITY.md` for the owner's guide).
+- **Device ID and activation:** every device starts locked and shows a 16-character Device ID; an activation code signed with the owner's secret key
+  (ECDSA P-256, prefix `SMK1-`) unlocks that one device, optionally until a date. Works on Android and Windows (MachineGuid). Expiry warning 15 days ahead,
+  clock-rollback guard, "This device" card in Settings. Code: `packages/core/src/license.ts` (+ 25 tests), `apps/ui/src/license/*`.
+- **Licence generator** page (`Documents\Smritikosh-license\Smritikosh-License-Generator.html`), built from `tools/license-generator`; command-line twin `scripts/issue-code.mjs`.
+  `scripts/check-generator.mjs` proves a code made by the page is accepted by the app's verifier.
+- **PIN:** wait after wrong tries (30 s doubling to 15 min, kept across restarts) and "Forgot PIN?" via a different, newer activation code.
+- **Android:** signing-certificate check at start (`IntegrityCheck.java` / `IntegrityPlugin.java`) plus a second check from the activation screen; screenshots and
+  recent-apps preview blocked in release builds; backup off; clear-text off; INTERNET permission removed; release not debuggable.
+- **Obfuscation:** the licence logic is scrambled in production builds; none of its strings are findable in the bundle.
+- **Data tied to activation:** the database opens only after activation (`license/session.ts`).
+- **Release scripts:** `pnpm apk:create-key` and `pnpm apk:release` (password typed into a Windows box, never saved). Key and licence files live outside the project in
+  `Documents\Smritikosh-license\` and are git-ignored.
+- **Signed APK** `F:\ClaudeWork\Smritikosh.apk` (also `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`): signed by CN=Smritikosh, verified with apksigner (v1 + v2),
+  versionCode 2. Built with sample data (everyday sample + Java and database notes) loaded once on first launch.
+- **Tested:** activation screen in the browser (garbage code, code for another device, right code, reload, expiry banner, clock rollback, re-activation) in both the
+  development build and the scrambled production build; generator page in a simulated browser; desktop app starts cleanly; signed APK installed on the phone and running.
+- **Not tested:** the Android tamper dialog (needs a re-signed copy), activation on the phone (the Device ID can only be read by eye because screenshots are blocked),
+  the Windows installer running on screen.
+
 ## Logo and Java / database notes (2026-10-25)
 - **Logo: "open book of memories"** (option 5 of `docs/design/logo-options.html`; the rendered 512px version is `docs/design/logo-512.png`).
   Drawn from scratch as a small SVG (two pages, faint text lines, three teal "spark" dots above). Used for: the header mark and lock screen
@@ -271,3 +302,9 @@ pnpm apk:debug            # -> apps/mobile/android/app/build/outputs/apk/debug/a
 ```
 Android needs `apps/mobile/android/local.properties` with `sdk.dir=C:/Users/Dell/AppData/Local/Android/Sdk`.
 Data: Windows `%APPDATA%\Smritikosh\smritikosh.db`.
+
+### Fix: signed APK stuck on "Opening Smritikosh…"
+- Cause: the licence scrambler hid the text of `import('@capacitor/device')` and `import('@capacitor/share')`, so the build left them as bare
+  module names and the phone could not load them; the Device ID was never read and the activation screen never appeared.
+- Fix: both are now ordinary imports at the top of `apps/ui/src/license/deviceId.ts` and `LicenseGate.tsx`. Never use dynamic `import()` in files under `src/license/`.
+- Found by logging timings from the phone (Capacitor only copies the app's console messages to logcat when `loggingBehavior` is `production`); that setting and the timing messages were removed again.

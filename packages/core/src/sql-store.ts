@@ -17,6 +17,12 @@ const now = () => new Date().toISOString();
 export class SqlStore implements DataStore {
   constructor(private db: SqlDriver) {}
 
+  /**
+   * Optional: runs `fn` as ONE database transaction (set by drivers that can, such as Android's SQLite bridge, where
+   * every separate write is a slow round trip). Use it for many writes at once, such as loading the sample data.
+   */
+  bulk?: <T>(fn: () => Promise<T>) => Promise<T>;
+
   async init() {
     await this.db.exec('CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)');
     const cur = (await this.db.all<{ v: number | null }>('SELECT MAX(version) AS v FROM schema_version'))[0]?.v ?? 0;
@@ -34,8 +40,11 @@ export class SqlStore implements DataStore {
 
   private async hydrate(rows: Row[]): Promise<Item[]> {
     if (rows.length === 0) return [];
+    // For a few rows (a single item after a save) only fetch their own tags instead of every tag in the database.
+    const few = rows.length <= 20;
     const tagRows = await this.db.all<{ item_id: string; name: string }>(
-      'SELECT it.item_id, t.name FROM item_tags it JOIN tags t ON t.id = it.tag_id',
+      `SELECT it.item_id, t.name FROM item_tags it JOIN tags t ON t.id = it.tag_id${few ? ` WHERE it.item_id IN (${rows.map(() => '?').join(',')})` : ''}`,
+      few ? rows.map((r) => r.id) : [],
     );
     const byItem = new Map<string, string[]>();
     for (const t of tagRows) byItem.set(t.item_id, [...(byItem.get(t.item_id) ?? []), t.name]);
@@ -95,7 +104,7 @@ export class SqlStore implements DataStore {
         JSON.stringify(input.meta ?? {}), input.pinned ? 1 : 0, input.archived ? 1 : 0, t, t,
       ],
     );
-    await this.setTags(id, input.tags ?? []);
+    if (input.tags?.length) await this.setTags(id, input.tags); // a new item has no old tags to clear
     return (await this.getItem(id))!;
   }
 

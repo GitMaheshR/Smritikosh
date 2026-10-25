@@ -11,6 +11,12 @@ async function derive(pin: string, salt: Uint8Array<ArrayBuffer>, iter: number):
 
 export const isValidPin = (pin: string) => /^\d{4,6}$/.test(pin);
 
+/** Wait after wrong PINs: none for the first 4, then 30 s, doubling each time, up to 15 minutes. */
+export function lockoutSeconds(failures: number): number {
+  if (failures < 5) return 0;
+  return Math.min(900, 30 * 2 ** (failures - 5));
+}
+
 export async function hashPin(pin: string, iter = ITER): Promise<string> {
   if (!isValidPin(pin)) throw new Error('PIN must be 4-6 digits');
   const salt = crypto.getRandomValues(new Uint8Array(16));

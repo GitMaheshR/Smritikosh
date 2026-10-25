@@ -5,6 +5,7 @@ import { useApp } from '../store/app';
 import { Card, Chip, PageHeader } from '../components/ui';
 import { platformName } from '../platform';
 import { plural } from '../format';
+import { reasonText, useLicense } from '../license/LicenseGate';
 
 const iconBtn = 'flex w-touch items-center justify-center text-muted hover:text-text';
 
@@ -48,6 +49,41 @@ function NotificationsCard() {
         )}
       </div>
       {(perm || remindersBlocked) && <p role="status" className="mt-2 text-meta text-muted">{perm || 'Reminders are switched off right now: notifications are not allowed for this app.'}</p>}
+    </Card>
+  );
+}
+
+function ThisDeviceCard() {
+  const { state, renew } = useLicense();
+  const [code, setCode] = useState('');
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const status = state.deviceCode === 'DEV-MODE'
+    ? 'Activation checks are off in this development build.'
+    : state.expires === null ? 'Activated. No expiry.'
+      : `Activated until ${state.expires}${state.daysLeft !== null ? ` (${plural(state.daysLeft, 'day')} left)` : ''}.`;
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!code.trim()) return;
+    const r = await renew(code);
+    if (r.ok) { setMsg({ ok: true, text: 'New activation code accepted.' }); setCode(''); }
+    else setMsg({ ok: false, text: reasonText(r.reason, r.expires) });
+  }
+  return (
+    <Card title="This device">
+      <span className="field-label">Device ID</span>
+      <div className="mb-2 flex items-center gap-2">
+        <p className="num flex-1 rounded-control border border-border bg-surface-2 px-3 py-2 text-center text-body font-semibold tracking-wider">{state.deviceCode}</p>
+        <button type="button" className="btn" onClick={async () => { try { await navigator.clipboard.writeText(state.deviceCode); setCopied(true); } catch { /* ignore */ } }}>{copied ? 'Copied' : 'Copy'}</button>
+      </div>
+      <p className="mb-3 text-body text-muted">{status}</p>
+      {state.deviceCode !== 'DEV-MODE' && (
+        <form onSubmit={submit} className="flex gap-2">
+          <input aria-label="New activation code" className="input num flex-1" placeholder="Enter a new code" value={code} autoComplete="off" onChange={(e) => { setCode(e.target.value); setMsg(null); }} />
+          <button type="submit" className="btn">Update</button>
+        </form>
+      )}
+      {msg && <p role="status" className={`mt-2 text-meta ${msg.ok ? 'text-muted' : 'text-overdue'}`}>{msg.text}</p>}
     </Card>
   );
 }
@@ -200,6 +236,7 @@ export function SettingsPage() {
           <AppearanceCard />
           <NotificationsCard />
           <PinCard />
+          <ThisDeviceCard />
           <SampleDataCard />
         </div>
         <div className="space-y-4">

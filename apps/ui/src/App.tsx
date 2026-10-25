@@ -4,6 +4,7 @@ import { applyTheme, useApp } from './store/app';
 import { Shell } from './components/Shell';
 import { LockScreen } from './components/LockScreen';
 import { BackHandler } from './components/BackHandler';
+import { LicenseGate } from './license/LicenseGate';
 import { HomePage } from './pages/Home';
 import { TasksPage } from './pages/Tasks';
 import { TaskForm } from './pages/TaskForm';
@@ -15,6 +16,14 @@ import { DevSeed } from './pages/DevSeed';
 import { DevComponents } from './pages/DevComponents';
 
 export default function App() {
+  return (
+    <LicenseGate>
+      <AppContent />
+    </LicenseGate>
+  );
+}
+
+function AppContent() {
   const { ready, locked, boot, theme } = useApp();
   useEffect(() => { void boot(); }, [boot]);
   useEffect(() => {

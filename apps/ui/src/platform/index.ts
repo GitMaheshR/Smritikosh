@@ -1,10 +1,11 @@
 import { MemoryStore, SqlStore, type DataStore, type Notifier, type SqlDriver } from '@smritikosh/core';
+import { requireUnlocked } from '../license/session';
 import { androidNotifier, desktopNotifier, webNotifier, type DesktopBridge } from './notifier';
 
 declare global {
   interface Window {
     /** Exposed by apps/desktop preload (contextBridge). */
-    smritikosh?: { invoke(method: string, ...args: unknown[]): Promise<unknown>; platform: 'desktop'; notifier: DesktopBridge };
+    smritikosh?: { invoke(method: string, ...args: unknown[]): Promise<unknown>; platform: 'desktop'; notifier: DesktopBridge; device: { getId(): Promise<string> } };
     Capacitor?: { isNativePlatform(): boolean };
   }
 }
@@ -35,12 +36,29 @@ async function capacitorStore(): Promise<DataStore> {
     ? await sqlite.retrieveConnection(name, false)
     : await sqlite.createConnection(name, false, 'no-encryption', 1, false);
   await conn.open();
+  let inTransaction = false; // while true, the writes below belong to one transaction (see store.bulk)
   const driver: SqlDriver = {
     exec: async (sql) => { await conn.execute(sql); },
-    run: async (sql, params = []) => { await conn.run(sql, params as never[], true); },
+    run: async (sql, params = []) => { await conn.run(sql, params as never[], !inTransaction); },
     all: async <T,>(sql: string, params: unknown[] = []) => ((await conn.query(sql, params as never[])).values ?? []) as T[],
   };
-  return new SqlStore(driver);
+  const store = new SqlStore(driver);
+  // Many writes at once (such as the sample data) would otherwise each be a slow round trip with its own commit.
+  store.bulk = async (fn) => {
+    await conn.beginTransaction();
+    inTransaction = true;
+    try {
+      const result = await fn();
+      await conn.commitTransaction();
+      return result;
+    } catch (e) {
+      await conn.rollbackTransaction().catch(() => undefined);
+      throw e;
+    } finally {
+      inTransaction = false;
+    }
+  };
+  return store;
 }
 
 /**
@@ -56,12 +74,18 @@ export async function onHardwareBack(handler: () => boolean): Promise<() => void
   return () => void sub.remove();
 }
 
+/** Runs many writes as one transaction where the platform supports it (Android); elsewhere just runs them. */
+export function inBulk<T>(store: DataStore, fn: () => Promise<T>): Promise<T> {
+  return store instanceof SqlStore && store.bulk ? store.bulk(fn) : fn();
+}
+
 export async function createNotifier(): Promise<Notifier> {
   const p = platformName();
   return p === 'desktop' ? desktopNotifier(window.smritikosh!.notifier) : p === 'android' ? androidNotifier() : webNotifier();
 }
 
 export async function createStore(): Promise<DataStore> {
+  requireUnlocked(); // the database only opens after this device has been activated
   const p = platformName();
   const store = p === 'desktop' ? electronStore() : p === 'android' ? await capacitorStore() : new MemoryStore();
   await store.init();

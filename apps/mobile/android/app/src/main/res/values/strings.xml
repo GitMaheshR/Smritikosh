@@ -4,4 +4,7 @@
     <string name="title_activity_main">Smritikosh</string>
     <string name="package_name">app.smritikosh.mobile</string>
     <string name="custom_url_scheme">app.smritikosh.mobile</string>
+    <string name="integrity_title">This copy has been modified</string>
+    <string name="integrity_message">This copy of Smritikosh is not the original app and will not open. Install the original app from its owner.</string>
+    <string name="integrity_close">Close</string>
 </resources>

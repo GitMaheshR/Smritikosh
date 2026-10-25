@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import {
-  LessonIndex, NOTEBOOKS_SETTING, isMilestone, milestonesOf, SearchIndex, completeTask, hasNotebook, hashPin, isBlankNote, isOpenTask,
+  LessonIndex, NOTEBOOKS_SETTING, loadSampleData, loadStudyNotes, isMilestone, milestonesOf, SearchIndex, completeTask, hasNotebook, hashPin, isBlankNote, isOpenTask,
   missedReminders, normalizeNotebookName, notebookOf, parseNotebookList, pendingReminders, removeFromList,
   renameInList, runNotesMigration, snoozeTime, toLocalIso, verifyPin, withNotebook,
   type Category, type ChecklistEntry, type DataStore, type Item, type Notifier, type ReminderEvent, type SnoozeKind, type Tag,
 } from '@smritikosh/core';
-import { createNotifier, createStore } from '../platform';
+import { createNotifier, createStore, inBulk } from '../platform';
+import { SEED_SAMPLE } from '../buildConfig';
 
 type Theme = 'system' | 'light' | 'dark';
 export interface Toast { id: number; message: string; undo?: () => void | Promise<void> }
@@ -105,6 +106,21 @@ export const useApp = create<AppState>((set, get) => ({
     notifier.onEvent((e) => void get().handleReminder(e));
     void notifier.requestPermission().then(() => get().refresh()).catch(() => set({ remindersBlocked: true }));
     set({ ready: true });
+
+    // The signed APK ships with sample data: loaded once, on the first launch, so deleting it sticks. It happens after the
+    // screen is already showing, in one database transaction (all or nothing), so the first launch does not feel slow.
+    if (SEED_SAMPLE && (await store.getSetting('sample_seeded')) !== '1') {
+      get().showToast('Setting up your sample data…');
+      void (async () => {
+        await inBulk(store, async () => {
+          await loadSampleData(store);
+          await loadStudyNotes(store);
+          await store.setSetting('sample_seeded', '1');
+        });
+        await get().refresh();
+        get().showToast('Sample data is ready');
+      })().catch((e) => console.warn('Sample data could not be loaded', e));
+    }
   },
 
   async refresh(reschedule = true) {

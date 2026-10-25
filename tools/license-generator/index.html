@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smritikosh · Licence generator</title>
+<style>
+  :root { --primary:#3547A6; --teal:#287D78; --bg:#F6F7FB; --text:#202538; --muted:#687086; --border:#E2E5EF; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, "Segoe UI", system-ui, sans-serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 28px 18px 60px; }
+  h1 { font-size: 26px; letter-spacing: -.03em; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 22px; line-height: 1.5; }
+  .eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--teal); }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 20px; padding: 18px; margin-bottom: 14px; }
+  .card h2 { font-size: 16px; margin: 4px 0 10px; }
+  label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin: 10px 0 4px; }
+  input, textarea { width: 100%; border: 1px solid var(--border); border-radius: 12px; padding: 11px 12px; font: inherit; background: #fff; color: var(--text); }
+  input[type=checkbox] { width: auto; margin-right: 8px; }
+  textarea { font-family: ui-monospace, Consolas, monospace; font-size: 13px; min-height: 96px; }
+  button { font: inherit; font-weight: 700; border: 1px solid var(--border); background: #fff; color: var(--text); border-radius: 12px; padding: 10px 16px; cursor: pointer; }
+  button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .msg { font-size: 13px; margin-top: 8px; min-height: 18px; } .ok { color: var(--teal); } .bad { color: #b64e3e; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; } th, td { text-align: left; padding: 8px 6px; border-top: 1px solid var(--border); }
+  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  .warn { background: #FFF6DF; color: #7a5600; border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.5; }
+  #result { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Owner tool · works offline</div>
+  <h1>Smritikosh licence generator</h1>
+  <p class="lead">Turn a phone's or PC's Device ID into an activation code. A code works on that one device only. Keep this page and your secret key file private.</p>
+
+  <div class="card">
+    <h2>1. Your secret key</h2>
+    <input type="file" id="keyfile" accept=".json,application/json">
+    <div class="msg" id="keymsg"></div>
+    <div class="warn">The file is <b>smritikosh-private-key.json</b> in this same folder. It never leaves your computer: this page only reads it in your browser.</div>
+  </div>
+
+  <div class="card">
+    <h2>2. The device</h2>
+    <label for="device">Device ID shown on the activation screen</label>
+    <input id="device" placeholder="AB12-CD34-EF56-GH78" autocomplete="off" spellcheck="false">
+    <label for="label">Who is it for? (optional, for your own list)</label>
+    <input id="label" placeholder="e.g. Mahesh's phone">
+    <label for="expiry">Valid until</label>
+    <input id="expiry" type="date" disabled>
+    <label style="font-weight:600;color:inherit"><input type="checkbox" id="noexp" checked>No expiry</label>
+    <div class="row"><button class="primary" id="make">Create activation code</button></div>
+    <div class="msg" id="makemsg"></div>
+    <div id="result">
+      <label for="code">Activation code</label>
+      <textarea id="code" readonly></textarea>
+      <div class="row"><button id="copycode">Copy code</button><button id="copywa">Copy message to send</button></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Codes you have made</h2>
+    <p class="lead" id="empty" style="margin:0">None yet.</p>
+    <table><thead><tr><th>When</th><th>Name</th><th>Device ID</th><th>Expires</th></tr></thead><tbody id="rows"></tbody></table>
+    <div class="row"><button id="csv">Download list (CSV)</button></div>
+  </div>
+</div>
+<script>/*SCRIPT*/</script>
+</body>
+</html>

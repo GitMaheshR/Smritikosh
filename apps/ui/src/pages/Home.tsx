@@ -5,6 +5,7 @@ import { focusTasks, homeStats, recentlyCaptured, todayProgress, type Item } fro
 import { useApp } from '../store/app';
 import { Card, EmptyState, PageHeader, ProgressBar, StatCard, TaskRow } from '../components/ui';
 import { todayLine, updatedPhrase } from '../format';
+import { useLicense } from '../license/LicenseGate';
 
 const KIND: Record<string, { label: string; icon: LucideIcon }> = {
   note: { label: 'Note', icon: NotebookPen },
@@ -18,6 +19,7 @@ export function HomePage() {
   const nav = useNavigate();
   const now = new Date();
   const { weekday, date } = todayLine(now);
+  const { state: lic } = useLicense();
   const stats = useMemo(() => homeStats(items, new Date()), [items]);
   const focus = useMemo(() => focusTasks(items, new Date()), [items]);
   const progress = useMemo(() => todayProgress(items, new Date()), [items]);
@@ -38,6 +40,13 @@ export function HomePage() {
         subtitle="Here’s your day at a glance. Start with one meaningful step."
         action={<span className="hidden items-center gap-2 rounded-control border border-border bg-surface px-3 py-2.5 text-meta text-muted md:inline-flex"><CalendarClock size={16} aria-hidden />Today · {date}</span>} />
 
+      {lic.daysLeft !== null && lic.daysLeft <= 15 && (
+        <div role="alert" className="mb-4 rounded-card border border-border border-l-4 border-l-medium bg-surface p-4">
+          <h2 className="text-heading">Your activation ends {lic.daysLeft <= 0 ? 'today' : `in ${lic.daysLeft} day${lic.daysLeft === 1 ? '' : 's'}`}</h2>
+          <p className="mb-3 mt-1 text-body text-muted">Ask the owner for a new activation code, then enter it in Settings under This device. Your data stays as it is.</p>
+          <Link to="/settings" className="btn">Open Settings</Link>
+        </div>
+      )}
       {remindersBlocked && (
         <div role="alert" className="mb-4 rounded-card border border-border border-l-4 border-l-overdue bg-surface p-4">
           <h2 className="text-heading">Reminders are switched off</h2>

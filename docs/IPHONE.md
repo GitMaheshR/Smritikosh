@@ -8,6 +8,32 @@ on a GitHub-hosted Mac by the workflow `.github/workflows/ios.yml` and installed
 2. Leave **Sign and upload to TestFlight** unticked and press **Run workflow**.
 3. A green tick means the iPhone app compiles. Mac minutes count 10× on a private repository, so run it only when needed.
 
+## Free install from Windows with Sideloadly (no paid account, works 7 days)
+Good for trying the app. The app stops opening after 7 days and must be installed again from the PC (installing over it keeps
+the data and the activation). A free Apple ID can have at most 3 such apps at a time.
+
+**Once, on the PC**
+1. Install Apple's **Apple Devices** app (Microsoft Store) or **iTunes** from apple.com (not the Store version if Sideloadly
+   asks for the other one). It provides the USB driver.
+2. Install **Sideloadly** from sideloadly.io (free, third-party, not made by Apple).
+
+**Get the app file**
+3. GitHub → Actions → **iPhone build** → Run workflow, **Sign and upload to TestFlight** unticked.
+4. When it is green, open the run, scroll to **Artifacts**, download `Smritikosh-iPhone-unsigned-<number>` and unzip it.
+   Inside is `Smritikosh-0.1.0-<number>-unsigned.ipa`. (Artifacts are kept 14 days.)
+
+**Install**
+5. Connect the iPhone with a cable, unlock it and tap **Trust** on the phone.
+6. Open Sideloadly, drag the `.ipa` onto it, choose the iPhone, type your Apple ID and press **Start**. Type the Apple ID
+   password into Sideloadly yourself when it asks. Sideloadly is a third-party tool, so a separate Apple ID made just for
+   this is the safer choice.
+7. On the iPhone: Settings → Privacy & Security → **Developer Mode** → on, and restart when asked (iOS 16 and later).
+8. Settings → General → **VPN & Device Management** → your Apple ID → **Trust**.
+9. Open Smritikosh and activate it with the Device ID, as on Android.
+
+**Every 7 days:** run step 6 again with the same file (or a newer build). Sideloadly can also refresh it automatically when the
+iPhone is on the same Wi-Fi as the PC (its "Automatic refresh" option).
+
 ## 2. One-time Apple setup (only you can do this)
 1. **Join the Apple Developer Program** (USD 99 a year) at developer.apple.com/programs with your Apple ID.
    Note your **Team ID**: developer.apple.com → Account → Membership details.

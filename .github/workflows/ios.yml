@@ -1,7 +1,8 @@
 # iPhone build on a GitHub-hosted Mac. Started by hand only (Actions tab -> iPhone build -> Run workflow),
 # because Mac minutes are expensive. See docs/IPHONE.md for the one-time Apple setup.
 #
-#   testflight = false : checks that the iPhone app builds. Unsigned; needs no Apple account.
+#   testflight = false : checks that the iPhone app builds and saves an unsigned .ipa (download it from the run's
+#                        Artifacts; install it with Sideloadly and a free Apple ID). Needs no Apple account.
 #   testflight = true  : builds, signs (Apple cloud signing) and uploads to TestFlight. Needs the four secrets below.
 #
 # Secrets (repository Settings -> Secrets and variables -> Actions), all from App Store Connect / the developer account:
@@ -62,9 +63,29 @@ jobs:
         working-directory: apps/mobile/ios/App
         run: |
           xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
-            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/dd" \
             MARKETING_VERSION="$APP_VERSION" CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
-            CODE_SIGNING_ALLOWED=NO -quiet build
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -quiet build
+
+      # An unsigned .ipa to sign and install from Windows with Sideloadly and a free Apple ID (see docs/IPHONE.md).
+      - name: Package unsigned .ipa
+        if: ${{ !inputs.testflight }}
+        run: |
+          app="$RUNNER_TEMP/dd/Build/Products/Release-iphoneos/App.app"
+          test -d "$app" || { echo "::error::App.app not found"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$app" "$RUNNER_TEMP/ipa/Payload/"
+          cd "$RUNNER_TEMP/ipa" && zip -qry "Smritikosh-${APP_VERSION}-${{ github.run_number }}-unsigned.ipa" Payload
+          ls -l "$RUNNER_TEMP/ipa"/*.ipa
+
+      - name: Save the .ipa for download
+        if: ${{ !inputs.testflight }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Smritikosh-iPhone-unsigned-${{ github.run_number }}
+          path: ${{ runner.temp }}/ipa/*.ipa
+          retention-days: 14
+          if-no-files-found: error
 
       - name: Write the App Store Connect key
         if: ${{ inputs.testflight }}

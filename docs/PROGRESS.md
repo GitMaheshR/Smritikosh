@@ -349,7 +349,7 @@ Data: Windows `%APPDATA%\Smritikosh\smritikosh.db`.
 - **Tested on the phone (moto g82):** Places page, Open in Google Maps, Directions, Use my location, Call, Share, a reminder ringing on time with
   the app in the background and its Done button.
 
-### iPhone version (2026-11-15, not yet built)
+### iPhone version (2026-11-15)
 - **Project:** Capacitor iOS platform added (`apps/mobile/ios`, bundle ID `app.smritikosh.mobile`, iOS 13+). Same screens and plugins as
   Android. `pnpm --filter @smritikosh/mobile sync:ios` builds the screens and copies them in.
 - **App changes:** the platform layer knows `ios` (`platformName()`, `isPhoneApp()`); reminders, database, GPS, Share, Maps and Call use
@@ -359,4 +359,6 @@ Data: Windows `%APPDATA%\Smritikosh\smritikosh.db`.
   App icon (1024 px, no transparency) and launch screen rendered by `pnpm icons` (big images are captured in 512 px tiles).
 - **Cloud build:** `.github/workflows/ios.yml` on a GitHub Mac, started by hand. Unsigned check needs no Apple account; the TestFlight run
   signs with Apple cloud signing using an App Store Connect API key kept in GitHub secrets. Owner steps: `docs/IPHONE.md`.
-- **Not tested:** nothing has been built or run for iPhone yet (no Mac here). The first unsigned cloud run is the first real check.
+- **Built:** the first unsigned cloud run (GitHub run 43739667790, macos-15, commit ddc58e5) passed: install, tests, screens, CocoaPods and
+  the Xcode Release build for iPhone all succeeded in about 2.5 minutes.
+- **Not tested:** the app has not run on an iPhone yet; that needs the Apple setup in `docs/IPHONE.md` and a TestFlight build.

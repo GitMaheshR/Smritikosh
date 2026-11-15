@@ -1,15 +1,17 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useBlocker, useNavigate, useParams } from 'react-router-dom';
+import { EditorContent, useEditor, type Editor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import { FontSize, TextStyle } from '@tiptap/extension-text-style';
+import { TaskItem, TaskList } from '@tiptap/extension-list';
+import { MoreHorizontal, NotebookPen, Pencil, Pin, Plus, RefreshCw, Search } from 'lucide-react';
 import {
-  Bold, CheckSquare, Code, Heading2, List, MoreHorizontal, NotebookPen, Pin, Plus, RefreshCw, Search,
-} from 'lucide-react';
-import {
-  isBlankNote, isLiveNote, listNotebooks, notebookOf, snippetFromBody, titleFromBody, toLocalIso, visibleNotes, type Item,
+  RICH_FORMAT, htmlToText, isBlankNote, isLiveNote, listNotebooks, noteSnippet, noteTitle, notebookOf, titleFromBody, toLocalIso, visibleNotes, type Item,
 } from '@smritikosh/core';
 import { useApp } from '../store/app';
 import { Chip, EmptyState, PageHeader, Sheet } from '../components/ui';
-import { Markdown } from '../components/Markdown';
-import { toggleCheckbox } from '../markdown';
+import { RichToolbar } from '../components/RichToolbar';
+import { noteForEditing } from '../noteHtml';
 import { useGoBack } from '../components/Shell';
 import { updatedPhrase } from '../format';
 
@@ -71,8 +73,8 @@ function NotesLibrary() {
                       <span className="truncate">{notebookOf(n) ?? 'Note'}{n.pinned && ' · Favorite'}</span>
                       {n.meta.revise === true && <RefreshCw size={12} className="shrink-0" aria-label="Review later" />}
                     </span>
-                    <h2 className="mt-2 line-clamp-2 text-heading">{titleFromBody(n.body)}</h2>
-                    <p className="mb-3 mt-1.5 line-clamp-3 flex-1 text-body text-muted">{snippetFromBody(n.body, 180) || 'No additional details yet.'}</p>
+                    <h2 className="mt-2 line-clamp-2 text-heading">{noteTitle(n)}</h2>
+                    <p className="mb-3 mt-1.5 line-clamp-3 flex-1 text-body text-muted">{noteSnippet(n, 180) || 'No additional details yet.'}</p>
                     <footer className="border-t border-border pt-2.5 text-meta text-faint">
                       Updated {updatedPhrase(n.updated_at)}
                     </footer>
@@ -87,7 +89,7 @@ function NotesLibrary() {
   );
 }
 
-function ActionsSheet({ note, onClose }: { note: Item; onClose: () => void }) {
+function ActionsSheet({ note, onClose, onDelete }: { note: Item; onClose: () => void; onDelete: () => void }) {
   const { items, notebooks, store, refresh, removeWithUndo, addNotebook, showToast } = useApp();
   const goBack = useGoBack();
   const [newBook, setNewBook] = useState('');
@@ -146,7 +148,7 @@ function ActionsSheet({ note, onClose }: { note: Item; onClose: () => void }) {
         </div>
 
         <div className="flex justify-between gap-2 px-3 pt-4">
-          <button type="button" className="btn btn-danger" onClick={async () => { onClose(); goBack(); await removeWithUndo(note); }}>Delete note</button>
+          <button type="button" className="btn btn-danger" onClick={async () => { onDelete(); onClose(); goBack(); await removeWithUndo(note); }}>Delete note</button>
           <button type="button" className="btn btn-primary" onClick={onClose}>Done</button>
         </div>
       </div>
@@ -154,106 +156,159 @@ function ActionsSheet({ note, onClose }: { note: Item; onClose: () => void }) {
   );
 }
 
-type FormatKind = 'bold' | 'heading' | 'list' | 'check' | 'code';
+const SAVE_PROMPT = 'You have changes that are not saved.';
 
-function FormatBar({ onApply }: { onApply: (kind: FormatKind) => void }) {
-  const b = 'flex w-touch items-center justify-center rounded-control text-muted hover:bg-surface-2';
-  // pointer-down is cancelled so the text box keeps focus (and the keyboard stays open) while a button is pressed
-  const bind = (kind: FormatKind) => ({ onPointerDown: (e: React.PointerEvent) => e.preventDefault(), onClick: () => onApply(kind) });
-  return (
-    <div className="sticky bottom-0 z-10 flex justify-around rounded-b-control border-t border-border bg-surface py-1" role="toolbar" aria-label="Formatting">
-      <button type="button" className={b} aria-label="Bold" {...bind('bold')}><Bold size={20} /></button>
-      <button type="button" className={b} aria-label="Heading" {...bind('heading')}><Heading2 size={20} /></button>
-      <button type="button" className={b} aria-label="Bulleted list" {...bind('list')}><List size={20} /></button>
-      <button type="button" className={b} aria-label="Checklist" {...bind('check')}><CheckSquare size={20} /></button>
-      <button type="button" className={b} aria-label="Code block" {...bind('code')}><Code size={20} /></button>
-    </div>
-  );
-}
-
+/** The note screen: reading view, and an editing view with a Title field, formatting toolbar, Save and Cancel. */
 function NoteEditor({ note }: { note: Item }) {
-  const { store, refresh } = useApp();
-  const [body, setBody] = useState(note.body ?? '');
+  const { store, refresh, showToast, readingMode } = useApp();
+  const goBack = useGoBack();
+  const initial = useMemo(() => noteForEditing(note), []); // read once: the editor owns the text while this screen is open
+  const [title, setTitle] = useState(initial.title);
   const [mode, setMode] = useState<'edit' | 'read'>(isBlankNote(note) ? 'edit' : 'read');
   const [menu, setMenu] = useState(false);
-  const area = useRef<HTMLTextAreaElement>(null);
-  const first = useRef(true);
-  const saved = useRef(body);
-  const latest = useRef(body);
-  latest.current = body;
+  const [dirty, setDirty] = useState(false);
+  const [empty, setEmpty] = useState(!initial.html);
+  const [ask, setAsk] = useState<'leave' | 'cancel' | null>(null);
+  const editorRef = useRef<Editor | null>(null);
+  const titleRef = useRef(title);
+  const dirtyRef = useRef(false);
+  const saved = useRef({ title: initial.title, html: '', blank: isBlankNote(note) });
+  titleRef.current = title;
+  dirtyRef.current = dirty;
 
-  // Grow the text box with its content so the page scrolls instead of the box.
-  useLayoutEffect(() => {
-    const el = area.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${Math.max(el.scrollHeight, 240)}px`;
-  }, [body, mode]);
+  const recompute = () => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    setEmpty(ed.isEmpty);
+    setDirty(titleRef.current !== saved.current.title || ed.getHTML() !== saved.current.html);
+  };
 
-  useEffect(() => { if (mode === 'edit') area.current?.focus(); }, [mode]);
+  // Writes the note to the database. The title is the Title field, or the first line when that is left empty.
+  async function write(): Promise<boolean> {
+    const ed = editorRef.current;
+    if (!ed || !store) return false;
+    const html = ed.getHTML();
+    const text = htmlToText(html);
+    const typedTitle = titleRef.current.trim();
+    if (!typedTitle && !text) return false;
+    const finalTitle = typedTitle || titleFromBody(text);
+    await store.updateItem(note.id, { title: finalTitle, body: html, meta: { ...note.meta, fmt: RICH_FORMAT } });
+    saved.current = { title: finalTitle, html, blank: false };
+    titleRef.current = finalTitle;
+    setTitle(finalTitle);
+    setDirty(false);
+    await refresh(false);
+    return true;
+  }
 
-  // Autosave 600 ms after the last keystroke. The title is simply the first line.
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({ link: false }), // links stay inert in this offline app
+      TextStyle, FontSize, TaskList,
+      TaskItem.configure({
+        nested: true,
+        // Ticking a box while reading: apply it to the text and save straight away.
+        onReadOnlyChecked: (_node, checked) => {
+          const ed = editorRef.current;
+          if (!ed) return false;
+          // The item handed over can be an older copy, so find the box that just changed: the first one on screen whose
+          // state differs from the text, in document order.
+          const boxes = Array.from(ed.view.dom.querySelectorAll<HTMLInputElement>('ul[data-type="taskList"] > li > label > input[type="checkbox"]'));
+          let index = 0;
+          let at = -1;
+          ed.state.doc.descendants((n, pos) => {
+            if (n.type.name !== 'taskItem') return true;
+            if (at < 0 && boxes[index] && boxes[index]!.checked !== n.attrs.checked) at = pos;
+            index++;
+            return true;
+          });
+          if (at < 0) return false;
+          const target = ed.state.doc.nodeAt(at)!;
+          ed.view.dispatch(ed.state.tr.setNodeMarkup(at, undefined, { ...target.attrs, checked }));
+          void write();
+          return true;
+        },
+      }),
+    ],
+    content: initial.html,
+    editable: mode === 'edit',
+    shouldRerenderOnTransaction: true,
+    editorProps: { attributes: { 'aria-label': 'Note text', class: 'md rich-text' } },
+    onUpdate: recompute,
+  });
+
   useEffect(() => {
-    if (first.current) { first.current = false; return; }
-    const t = window.setTimeout(async () => {
-      saved.current = body;
-      await store!.updateItem(note.id, { title: titleFromBody(body), body });
-      await refresh(false);
-    }, 600);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [body]);
+    editorRef.current = editor;
+    if (editor && !saved.current.html) saved.current.html = editor.getHTML();
+  }, [editor]);
 
-  // Leaving the note: save what was typed in the last moment; a note left blank is discarded.
-  // Deferred a tick and skipped if the editor mounts again straight away (React dev mode re-mounts once).
+  useEffect(() => {
+    if (!editor) return;
+    editor.setEditable(mode === 'edit');
+    if (mode === 'edit' && !isBlankNote(note)) editor.commands.focus('end');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, mode]);
+
+  // Leaving with unsaved changes (Back, Android Back, another screen) asks first.
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirtyRef.current && currentLocation.pathname !== nextLocation.pathname);
+  useEffect(() => { if (blocker.state === 'blocked') setAsk('leave'); }, [blocker.state]);
+
+  // A new note that was never saved is removed when the screen closes. Deferred a tick and skipped if the screen mounts
+  // again straight away (React dev mode re-mounts once).
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
     return () => {
       alive.current = false;
       window.setTimeout(() => {
-        if (alive.current) return;
-        const text = latest.current;
-        const s = store!;
-        void (async () => {
-          if (!text.trim()) await s.deleteItem(note.id);
-          else if (text !== saved.current) await s.updateItem(note.id, { title: titleFromBody(text), body: text });
-          await useApp.getState().refresh(false);
-        })();
+        if (alive.current || !saved.current.blank) return;
+        void (async () => { await store!.deleteItem(note.id); await useApp.getState().refresh(false); })();
       }, 0);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function apply(kind: FormatKind) {
-    const el = area.current;
-    if (!el) return;
-    const s = el.selectionStart, e = el.selectionEnd;
-    const sel = body.slice(s, e);
-    let next: string, from: number, to: number;
-    if (kind === 'bold') {
-      const t = sel || 'bold';
-      next = `${body.slice(0, s)}**${t}**${body.slice(e)}`; from = s + 2; to = from + t.length;
-    } else if (kind === 'code') {
-      const t = sel || 'code';
-      next = `${body.slice(0, s)}\n\`\`\`\n${t}\n\`\`\`\n${body.slice(e)}`; from = s + 5; to = from + t.length;
-    } else {
-      const prefix = kind === 'heading' ? '## ' : kind === 'list' ? '- ' : '- [ ] ';
-      const ls = body.lastIndexOf('\n', s - 1) + 1;
-      next = `${body.slice(0, ls)}${prefix}${body.slice(ls)}`; from = s + prefix.length; to = e + prefix.length;
+  async function save() {
+    if (await write()) { setMode('read'); showToast('Note saved'); }
+  }
+  function revert() {
+    setTitle(saved.current.title);
+    titleRef.current = saved.current.title;
+    editorRef.current?.commands.setContent(saved.current.html);
+    setDirty(false);
+    setMode('read');
+  }
+  function cancel() {
+    if (dirty) setAsk('cancel');
+    else if (saved.current.blank) goBack();
+    else revert();
+  }
+  async function answer(choice: 'save' | 'discard' | 'keep') {
+    const kind = ask;
+    setAsk(null);
+    if (choice === 'keep') { if (kind === 'leave') blocker.reset?.(); return; }
+    if (choice === 'save') {
+      if (!(await write())) { if (kind === 'leave') blocker.reset?.(); showToast('Add a title or some text first'); return; }
+      if (kind === 'leave') blocker.proceed?.(); else { setMode('read'); showToast('Note saved'); }
+      return;
     }
-    setBody(next);
-    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(from, to); });
+    if (kind === 'leave') blocker.proceed?.();
+    else if (saved.current.blank) { dirtyRef.current = false; goBack(); } else revert();
   }
 
   const book = notebookOf(note);
+  const canSave = !!title.trim() || !empty;
   return (
     <article className="min-w-0 max-w-3xl">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex gap-2" role="tablist" aria-label="Note view">
-          <Chip selected={mode === 'read'} onClick={() => setMode('read')}>Read</Chip>
-          <Chip selected={mode === 'edit'} onClick={() => setMode('edit')}>Edit</Chip>
-        </div>
+        {mode === 'edit' ? (
+          <div className="flex gap-2">
+            <button type="button" className="btn btn-primary disabled:opacity-50" disabled={!canSave} onClick={() => void save()}>Save</button>
+            <button type="button" className="btn" onClick={cancel}>Cancel</button>
+          </div>
+        ) : (
+          <button type="button" className="btn btn-primary" onClick={() => setMode('edit')}><Pencil size={16} aria-hidden />Edit</button>
+        )}
         <div className="flex items-center gap-1">
           {note.pinned && <Pin size={16} className="text-secondary" aria-label="Favorite" />}
           {note.meta.revise === true && <RefreshCw size={16} className="text-primary" aria-label="Review later" />}
@@ -269,21 +324,33 @@ function NoteEditor({ note }: { note: Item }) {
         </div>
       )}
 
-      {mode === 'edit' ? (
-        <div className="rounded-card border border-border bg-surface">
-          <textarea ref={area} aria-label="Note" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Start typing…"
-            className="block w-full resize-none rounded-t-card bg-transparent p-4 text-body outline-none" />
-          <FormatBar onApply={apply} />
+      <div className="rounded-card border border-border bg-surface">
+        {mode === 'edit' ? (
+          <input aria-label="Title" placeholder="Title" maxLength={120} autoFocus={saved.current.blank} value={title}
+            onChange={(e) => { setTitle(e.target.value); titleRef.current = e.target.value; recompute(); }}
+            className="block w-full rounded-t-card bg-transparent px-4 pt-4 text-title font-extrabold outline-none placeholder:text-faint" />
+        ) : title.trim() ? (
+          <h1 className="px-4 pt-4 text-title font-extrabold">{title}</h1>
+        ) : null}
+        <div className={`relative px-4 py-4 ${mode === 'read' && readingMode ? 'md-reading' : ''}`}>
+          <EditorContent editor={editor} />
+          {mode === 'edit' && empty && <p aria-hidden className="pointer-events-none absolute left-4 top-4 text-body text-faint">Start typing…</p>}
+          {mode === 'read' && empty && <p className="py-4 text-center text-body text-muted">Nothing written yet. Tap Edit to start.</p>}
         </div>
-      ) : body.trim() ? (
-        <div className="panel">
-          <Markdown source={body} onToggleCheck={(i) => setBody((b) => toggleCheckbox(b, i))} />
-        </div>
-      ) : (
-        <p className="py-8 text-center text-body text-muted">Nothing written yet. Tap Edit to start.</p>
-      )}
+        {mode === 'edit' && editor && <RichToolbar editor={editor} />}
+      </div>
 
-      {menu && <ActionsSheet note={note} onClose={() => setMenu(false)} />}
+      {menu && <ActionsSheet note={note} onClose={() => setMenu(false)} onDelete={() => { dirtyRef.current = false; }} />}
+
+      <Sheet open={ask !== null} onClose={() => void answer('keep')} label="Unsaved changes">
+        <h2 className="text-heading">Save your changes?</h2>
+        <p className="mt-1 text-body text-muted">{SAVE_PROMPT} {ask === 'cancel' ? 'Cancel the edit and lose them?' : 'Save them before you leave?'}</p>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button type="button" className="btn btn-danger" onClick={() => void answer('discard')}>Discard</button>
+          <button type="button" className="btn" onClick={() => void answer('keep')}>Keep editing</button>
+          <button type="button" className="btn btn-primary" onClick={() => void answer('save')}>Save</button>
+        </div>
+      </Sheet>
     </article>
   );
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MemoryStore } from './memory-store';
 import { SearchIndex } from './search';
 import {
-  hasNotebook, isBlankNote, listNotebooks, normalizeNotebookName, notebookOf, parseNotebookList, planNotesMigration,
+  hasNotebook, htmlToText, isBlankNote, listNotebooks, noteSnippet, noteTitle, normalizeNotebookName, notebookOf, parseNotebookList, planNotesMigration,
   removeFromList, renameInList, reviseList, runNotesMigration, snippetFromBody, titleFromBody, visibleNotes, withNotebook,
 } from './notes';
 import { LessonIndex, lessonToItem, situationOptions } from './lessons';
@@ -238,5 +238,46 @@ describe('seed + search speed', () => {
     await seedNotes(s, 10);
     expect(await removeSeededNotes(s)).toBe(10);
     expect((await s.listItems()).map((i) => i.title)).toEqual(['mine']);
+  });
+});
+
+describe('formatted (HTML) notes', () => {
+  const rich = (title: string, body: string) => ({
+    id: 'n', type: 'note', title, body, meta: { fmt: 'html' }, tags: [], deleted_at: null, updated_at: '2026-01-01T00:00:00Z', pinned: false,
+  } as unknown as import('./types').Item);
+
+  it('reads the words out of the HTML', () => {
+    expect(htmlToText('<p>Buy <strong>milk</strong> &amp; eggs</p><ul><li><p>one</p></li><li><p>two</p></li></ul>')).toBe('Buy milk & eggs\none\ntwo');
+    expect(htmlToText('<p></p>')).toBe('');
+    expect(htmlToText('a<br>b')).toBe('a\nb');
+  });
+  it('uses the Title field, or the first line when it is empty', () => {
+    expect(noteTitle(rich('Groceries', '<p>milk</p>'))).toBe('Groceries');
+    expect(noteTitle(rich('', '<p>First <em>line</em></p><p>more</p>'))).toBe('First line');
+    expect(noteTitle(rich('Untitled', '<p>Hello</p>'))).toBe('Hello');
+    expect(noteTitle(rich('', '<p></p>'))).toBe('Untitled');
+  });
+  it('previews what follows the title', () => {
+    expect(noteSnippet(rich('Groceries', '<p>milk</p><p>eggs</p>'))).toBe('milk eggs');
+    expect(noteSnippet(rich('', '<p>Title line</p><p>rest here</p>'))).toBe('rest here');
+  });
+  it('is blank only with no words and no real title', () => {
+    expect(isBlankNote(rich('Untitled', '<p></p>'))).toBe(true);
+    expect(isBlankNote(rich('', ''))).toBe(true);
+    expect(isBlankNote(rich('Ideas', '<p></p>'))).toBe(false);
+    expect(isBlankNote(rich('Untitled', '<p>x</p>'))).toBe(false);
+  });
+  it('older markdown notes behave as before', () => {
+    const md = { ...rich('x', '# Old note\n\nbody'), meta: {} };
+    expect(noteTitle(md)).toBe('Old note');
+    expect(noteSnippet(md)).toBe('body');
+    expect(isBlankNote({ ...md, body: '  ' })).toBe(true);
+  });
+  it('search finds words inside the HTML but not the tags', () => {
+    const idx = new SearchIndex();
+    idx.build([rich('Groceries', '<p>buy <strong>oat</strong>milk</p>')]);
+    expect(idx.search('groceries').length).toBe(1);
+    expect(idx.search('strong').length).toBe(0);
+    expect(idx.search('oat').length).toBe(1);
   });
 });

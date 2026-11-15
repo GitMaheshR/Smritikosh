@@ -38,7 +38,7 @@ pnpm apk:create-key     # once: a password box opens; creates Documents\Smritiko
 pnpm apk:release        # a password box opens; builds, signs and verifies the APK (add -NoSample to leave out sample data)
 ```
 The password is typed into a Windows box, used for that one run, and never saved. Output: `apps\mobile\android\app\build\outputs\apk\release\app-release.apk`,
-copied to `F:\ClaudeWork\Smritikosh.apk`. The release build loads the sample data (everyday sample plus the Java and database notes) once, on first launch.
+copied to `F:\ClaudeWork\Smritikosh.apk`. The release build loads the sample data (the everyday sample: tasks, notes, journal entries and goals) once, on first launch.
 
 Other commands: `pnpm license:keygen` (once, refuses to overwrite an existing key), `pnpm license:tool` (rebuilds the generator page), `pnpm icons` (regenerates the icons).
 

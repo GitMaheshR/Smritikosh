@@ -6,7 +6,7 @@ import { Checkbox, EmptyState, FormRow, PageHeader } from '../components/ui';
 import { useGoBack } from '../components/Shell';
 import { ListChecks } from 'lucide-react';
 
-const REPEATS = [
+export const REPEATS = [
   ['', 'Does not repeat'], ['FREQ=DAILY', 'Every day'], ['FREQ=WEEKLY', 'Every week'],
   ['FREQ=MONTHLY', 'Every month'], ['FREQ=YEARLY', 'Every year'],
 ] as const;
@@ -17,7 +17,7 @@ interface Draft {
 }
 const blank: Draft = { title: '', body: '', due_at: '', remind_at: '', priority: 2, category: '', repeat_rule: '', freeTime: false, estimateMins: '' };
 
-/** New task (`/tasks/new`) and edit task (`/tasks/:id`) as a full page, like the Daymark form view. */
+/** New task (`/tasks/new`) and edit task (`/tasks/:id/edit`) as a full page, like the Daymark form view. */
 export function TaskForm() {
   const { id } = useParams();
   const { items, categories, checklist, store, refresh, removeWithUndo } = useApp();

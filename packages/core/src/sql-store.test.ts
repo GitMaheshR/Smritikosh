@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { MemoryStore } from './memory-store';
 import { SqlStore, type SqlDriver } from './sql-store';
 import { loadSampleData, removeSampleData } from './sample';
-import { loadStudyNotes } from './study';
 import { runNotesMigration } from './notes';
 import { goalProgress, sortedGoals } from './goals';
 
@@ -30,7 +29,7 @@ describe('SqlStore (the real SQL used on the phone and PC)', () => {
     expect((await store.listCategories()).map((c) => c.name)).toEqual(['Bank', 'Legal', 'Health', 'Skills', 'Office', 'Home', 'Personal']);
   });
 
-  it('holds the same sample and study data as the in-memory store', async () => {
+  it('holds the same sample data as the in-memory store', async () => {
     const { store } = sqlStore();
     await store.init();
     const mem = new MemoryStore();
@@ -38,7 +37,6 @@ describe('SqlStore (the real SQL used on the phone and PC)', () => {
     for (const s of [store, mem]) {
       await runNotesMigration(s);
       await loadSampleData(s, NOW);
-      await loadStudyNotes(s);
     }
     const [a, b] = [await store.listItems(), await mem.listItems()];
     const count = (items: typeof a, t: string) => items.filter((i) => i.type === t).length;
@@ -47,15 +45,14 @@ describe('SqlStore (the real SQL used on the phone and PC)', () => {
     expect((await store.listAllChecklist()).length).toBe((await mem.listAllChecklist()).length);
     expect(sortedGoals(a).map((g) => goalProgress(a, g).percent)).toEqual(sortedGoals(b).map((g) => goalProgress(b, g).percent));
     // JSON meta and flags survive the round trip
-    expect(a.find((i) => i.title === 'equals() and hashCode() contract')?.meta).toMatchObject({ notebook: 'Java', revise: true, sample: true, sampleSet: 'study' });
+    expect(a.find((i) => i.meta.sample === true)?.meta).toMatchObject({ sample: true });
   });
 
   it('removes sample data again', async () => {
     const { store } = sqlStore();
     await store.init();
     await loadSampleData(store, NOW);
-    await loadStudyNotes(store);
-    expect(await removeSampleData(store)).toBe(36 + 11);
+    expect(await removeSampleData(store)).toBe(36);
     expect(await store.listItems()).toHaveLength(0);
   });
 

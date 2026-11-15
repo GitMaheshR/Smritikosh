@@ -39,11 +39,50 @@ export function snippetFromBody(body: string | null | undefined, max = 110): str
   return rest.length > max ? `${rest.slice(0, max - 1)}…` : rest;
 }
 
+// ---- Formatted notes: the text is saved as HTML (meta.fmt = 'html'); older notes are still markdown --------
+
+export const RICH_FORMAT = 'html';
+export const isRichNote = (i: Pick<Item, 'meta'>) => i.meta.fmt === RICH_FORMAT;
+
+const ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&nbsp;': ' ' };
+
+/** The words of a formatted note: tags removed, paragraphs and list items on their own lines. */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<\/(?:p|div|li|h[1-6]|pre|blockquote|tr)>|<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, (m) => ENTITIES[m] ?? m)
+    .replace(/[ \t]+/g, ' ')
+    .replace(/ ?\n ?/g, '\n')
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+}
+
+/** The text of a note as plain words, whatever format it was saved in. Used for search and previews. */
+export const noteText = (i: Item): string => (isRichNote(i) ? htmlToText(i.body ?? '') : i.body ?? '');
+
+const hasTitle = (i: Item) => !!i.title.trim() && i.title !== 'Untitled';
+
+/** The note's title: the Title field of a formatted note (or its first line when empty), the first line of an older note. */
+export function noteTitle(i: Item): string {
+  if (!isRichNote(i)) return titleFromBody(i.body);
+  return hasTitle(i) ? i.title.trim() : titleFromBody(noteText(i));
+}
+
+/** A one-line preview of what follows the title. */
+export function noteSnippet(i: Item, max = 110): string {
+  if (!isRichNote(i)) return snippetFromBody(i.body, max);
+  const text = noteText(i);
+  if (!hasTitle(i)) return snippetFromBody(text, max);
+  const flat = text.split('\n').map((l) => l.trim()).filter(Boolean).join(' ');
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+}
+
 // ---- Notes, notebooks, filters ------------------------------------------------------------------
 
 export const isLiveNote = (i: Item) => i.type === 'note' && !i.deleted_at;
 /** A note nobody has typed into yet (created when "New note" opens, removed if left blank). */
-export const isBlankNote = (i: Item) => !(i.body ?? '').trim();
+export const isBlankNote = (i: Item) => !noteText(i).trim() && (!isRichNote(i) || !hasTitle(i));
 export const notebookOf = (i: Item): string | null =>
   typeof i.meta.notebook === 'string' && i.meta.notebook.trim() ? i.meta.notebook.trim() : null;
 

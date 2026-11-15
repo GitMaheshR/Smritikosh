@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Grid2x2, Plus, Search } from 'lucide-react';
 import { useApp } from '../store/app';
 import { NAV_GROUPS, navItem } from '../modules';
+import { BackHandler } from './BackHandler';
 import { QuickAdd, SearchBar } from './Overlays';
 import { BrandMark, Sheet } from './ui';
 import { ReminderPrompt, ToastHost } from './Feedback';
@@ -58,6 +59,7 @@ export function Shell() {
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-shell px-page-x pt-4 md:pt-6">
+      <BackHandler />
       <header className="mb-4 flex items-center justify-between gap-3 md:mb-6">
         <div className="flex min-w-0 items-center gap-3">
           {showBack && (

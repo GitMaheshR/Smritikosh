@@ -1,5 +1,6 @@
 import MiniSearch from 'minisearch';
 import type { Item, ItemType } from './../types';
+import { noteText } from '../notes';
 
 export interface SearchFilters {
   type?: ItemType;
@@ -23,7 +24,7 @@ const toDoc = (i: Item): Doc => ({
   id: i.id,
   type: i.type,
   title: i.title,
-  body: i.body ?? '',
+  body: noteText(i),
   tags: i.tags.join(' '),
   category: i.category ?? '',
   status: i.status ?? '',

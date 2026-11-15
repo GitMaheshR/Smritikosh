@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
-import { isValidPin, listNotebooks, loadSampleData, loadStudyNotes, removeSampleData } from '@smritikosh/core';
+import { isValidPin, listNotebooks, loadSampleData, removeSampleData } from '@smritikosh/core';
 import { useApp } from '../store/app';
 import { Card, Chip, PageHeader } from '../components/ui';
 import { platformName } from '../platform';
@@ -117,8 +117,7 @@ function PinCard() {
 function SampleDataCard() {
   const { store, refresh, showToast, items } = useApp();
   const [busy, setBusy] = useState(false);
-  const hasStudy = items.some((i) => i.meta.sampleSet === 'study');
-  const hasEveryday = items.some((i) => i.meta.sample === true && i.meta.sampleSet !== 'study');
+  const hasEveryday = items.some((i) => i.meta.sample === true);
   async function run(fn: () => Promise<string>) {
     setBusy(true);
     try { const msg = await fn(); await refresh(); showToast(msg); } finally { setBusy(false); }
@@ -127,9 +126,8 @@ function SampleDataCard() {
     const r = await loadSampleData(store!);
     return `Added ${r.tasks} tasks, ${r.notes} notes, ${r.lessons} journal entries, ${r.goals} goals`;
   });
-  const addStudy = () => run(async () => `Added ${await loadStudyNotes(store!)} Java and database notes (Notes screen)`);
   async function remove() {
-    if (!window.confirm('Remove all sample tasks, notes, journal entries, goals and study notes? Your own items are not touched.')) return;
+    if (!window.confirm('Remove all sample tasks, notes, journal entries and goals? Your own items are not touched.')) return;
     await run(async () => `Removed ${await removeSampleData(store!)} sample items`);
   }
   return (
@@ -142,10 +140,7 @@ function SampleDataCard() {
         <button type="button" disabled={busy || hasEveryday} onClick={() => void addEveryday()} className="btn btn-primary disabled:opacity-50">
           {hasEveryday ? 'Everyday sample loaded' : 'Add tasks, notes, journal and goals'}
         </button>
-        <button type="button" disabled={busy || hasStudy} onClick={() => void addStudy()} className="btn disabled:opacity-50">
-          {hasStudy ? 'Java and database notes loaded' : 'Add Java and database notes'}
-        </button>
-        {(hasEveryday || hasStudy) && <button type="button" disabled={busy} onClick={() => void remove()} className="btn">Remove sample data</button>}
+        {hasEveryday && <button type="button" disabled={busy} onClick={() => void remove()} className="btn">Remove sample data</button>}
       </div>
     </Card>
   );

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import {
-  LessonIndex, NOTEBOOKS_SETTING, loadSampleData, loadStudyNotes, isMilestone, milestonesOf, SearchIndex, completeTask, hasNotebook, hashPin, isBlankNote, isOpenTask,
+  LessonIndex, NOTEBOOKS_SETTING, loadSampleData, isMilestone, milestonesOf, SearchIndex, completeTask, hasNotebook, hashPin, isBlankNote, isOpenTask,
   missedReminders, normalizeNotebookName, notebookOf, parseNotebookList, pendingReminders, removeFromList,
   renameInList, runNotesMigration, snoozeTime, toLocalIso, verifyPin, withNotebook,
   type Category, type ChecklistEntry, type DataStore, type Item, type Notifier, type ReminderEvent, type SnoozeKind, type Tag,
@@ -114,7 +114,6 @@ export const useApp = create<AppState>((set, get) => ({
       void (async () => {
         await inBulk(store, async () => {
           await loadSampleData(store);
-          await loadStudyNotes(store);
           await store.setSetting('sample_seeded', '1');
         });
         await get().refresh();

@@ -35,7 +35,7 @@ function sampleTasks(now: Date): SampleTask[] {
 
 /** Adds a small, realistic set of notes, tasks and lessons. Everything is flagged `meta.sample` so it can be removed. */
 export async function loadSampleData(store: DataStore, now: Date = new Date()): Promise<{ tasks: number; notes: number; lessons: number; goals: number }> {
-  if ((await store.listItems({ includeDeleted: false })).some((i) => isSample(i) && i.meta.sampleSet !== 'study')) return { tasks: 0, notes: 0, lessons: 0, goals: 0 };
+  if ((await store.listItems({ includeDeleted: false })).some((i) => isSample(i))) return { tasks: 0, notes: 0, lessons: 0, goals: 0 };
 
   let tasks = 0, notes = 0, lessons = 0, goals = 0;
 

@@ -308,3 +308,15 @@ Data: Windows `%APPDATA%\Smritikosh\smritikosh.db`.
   module names and the phone could not load them; the Device ID was never read and the activation screen never appeared.
 - Fix: both are now ordinary imports at the top of `apps/ui/src/license/deviceId.ts` and `LicenseGate.tsx`. Never use dynamic `import()` in files under `src/license/`.
 - Found by logging timings from the phone (Capacitor only copies the app's console messages to logcat when `loggingBehavior` is `production`); that setting and the timing messages were removed again.
+
+### Tasks view/edit, formatted notes, Java and database samples removed
+- **Tasks:** opening a task shows read-only details (`pages/TaskDetail.tsx`, `/tasks/:id`) with Edit, Mark done and Delete (undo). Editing is its own page (`/tasks/:id/edit`, `TaskForm`).
+- **Notes:** a Title field; explicit Save and Cancel (no more autosave); leaving with unsaved changes (Back, Android Back, another screen) asks Save / Discard / Keep editing.
+  This needs a data router, so `App.tsx` now uses `createHashRouter` and `BackHandler` lives inside `Shell`.
+- **Editor:** TipTap (offline, bundled). No markdown signs: toolbar for Bold, Italic, Underline, text size (Small, Normal, Large, Extra large), Bullets, Numbering, Checklist, Undo, Redo.
+  Selecting lines and pressing Bullets or Numbering turns each line into an item; Enter continues the list. Checklist boxes can be ticked while reading and are saved at once.
+- **Storage:** formatted notes are saved as HTML with `meta.fmt = 'html'` and the Title in `items.title`. Older markdown notes are converted when first opened for editing and saved in the new format on the next Save
+  (`noteHtml.ts`); until then they still show. Core helpers `noteText`, `noteTitle`, `noteSnippet`, `htmlToText`, `isBlankNote` read both formats; search indexes the plain text.
+- **Removed:** the Java and database sample notes (`study.ts`) and their Settings button; the old markdown reader (`Markdown.tsx`, `markdown.ts`) and the `dompurify` and `highlight.js` packages. "Remove sample data" still removes study notes that were already loaded.
+- **Keyboard mic:** voice typing on the Google keyboard works in the editor and the Title field; nothing was built for it.
+- Known: the UI bundle grew by about 360 KB (editor). Not tested on a phone yet.

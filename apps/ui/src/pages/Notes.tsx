@@ -156,6 +156,12 @@ function ActionsSheet({ note, onClose, onDelete }: { note: Item; onClose: () => 
   );
 }
 
+/** Two note texts are the same if they differ only by the empty paragraphs the editor keeps at the end. */
+const sameText = (a: string, b: string) => {
+  const trim = (h: string) => h.replace(/(?:<p>(?:<br[^>]*>)?<\/p>)+$/, '').trim();
+  return trim(a) === trim(b);
+};
+
 const SAVE_PROMPT = 'You have changes that are not saved.';
 
 /** The note screen: reading view, and an editing view with a Title field, formatting toolbar, Save and Cancel. */
@@ -166,22 +172,22 @@ function NoteEditor({ note }: { note: Item }) {
   const [title, setTitle] = useState(initial.title);
   const [mode, setMode] = useState<'edit' | 'read'>(isBlankNote(note) ? 'edit' : 'read');
   const [menu, setMenu] = useState(false);
-  const [dirty, setDirty] = useState(false);
   const [empty, setEmpty] = useState(!initial.html);
   const [ask, setAsk] = useState<'leave' | 'cancel' | null>(null);
   const editorRef = useRef<Editor | null>(null);
   const titleRef = useRef(title);
-  const dirtyRef = useRef(false);
+  const skipGuard = useRef(false); // set when the note is being deleted, so leaving does not ask
   const saved = useRef({ title: initial.title, html: '', blank: isBlankNote(note) });
   titleRef.current = title;
-  dirtyRef.current = dirty;
 
-  const recompute = () => {
+  // Anything different from what was last saved? Compared when asked, ignoring spaces around the title and the empty
+  // line the editor keeps at the end, so only a real change counts.
+  const isDirty = () => {
     const ed = editorRef.current;
-    if (!ed) return;
-    setEmpty(ed.isEmpty);
-    setDirty(titleRef.current !== saved.current.title || ed.getHTML() !== saved.current.html);
+    if (!ed) return false;
+    return titleRef.current.trim() !== saved.current.title.trim() || sameText(ed.getHTML(), saved.current.html) === false;
   };
+  const recompute = () => { if (editorRef.current) setEmpty(editorRef.current.isEmpty); };
 
   // Writes the note to the database. The title is the Title field, or the first line when that is left empty.
   async function write(): Promise<boolean> {
@@ -196,7 +202,6 @@ function NoteEditor({ note }: { note: Item }) {
     saved.current = { title: finalTitle, html, blank: false };
     titleRef.current = finalTitle;
     setTitle(finalTitle);
-    setDirty(false);
     await refresh(false);
     return true;
   }
@@ -250,7 +255,7 @@ function NoteEditor({ note }: { note: Item }) {
   }, [editor, mode]);
 
   // Leaving with unsaved changes (Back, Android Back, another screen) asks first.
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirtyRef.current && currentLocation.pathname !== nextLocation.pathname);
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => !skipGuard.current && isDirty() && currentLocation.pathname !== nextLocation.pathname);
   useEffect(() => { if (blocker.state === 'blocked') setAsk('leave'); }, [blocker.state]);
 
   // A new note that was never saved is removed when the screen closes. Deferred a tick and skipped if the screen mounts
@@ -275,11 +280,11 @@ function NoteEditor({ note }: { note: Item }) {
     setTitle(saved.current.title);
     titleRef.current = saved.current.title;
     editorRef.current?.commands.setContent(saved.current.html);
-    setDirty(false);
+    setEmpty(!!editorRef.current?.isEmpty);
     setMode('read');
   }
   function cancel() {
-    if (dirty) setAsk('cancel');
+    if (isDirty()) setAsk('cancel');
     else if (saved.current.blank) goBack();
     else revert();
   }
@@ -293,7 +298,7 @@ function NoteEditor({ note }: { note: Item }) {
       return;
     }
     if (kind === 'leave') blocker.proceed?.();
-    else if (saved.current.blank) { dirtyRef.current = false; goBack(); } else revert();
+    else if (saved.current.blank) { skipGuard.current = true; goBack(); } else revert();
   }
 
   const book = notebookOf(note);
@@ -327,7 +332,7 @@ function NoteEditor({ note }: { note: Item }) {
       <div className="rounded-card border border-border bg-surface">
         {mode === 'edit' ? (
           <input aria-label="Title" placeholder="Title" maxLength={120} autoFocus={saved.current.blank} value={title}
-            onChange={(e) => { setTitle(e.target.value); titleRef.current = e.target.value; recompute(); }}
+            onChange={(e) => { setTitle(e.target.value); titleRef.current = e.target.value; }}
             className="block w-full rounded-t-card bg-transparent px-4 pt-4 text-title font-extrabold outline-none placeholder:text-faint" />
         ) : title.trim() ? (
           <h1 className="px-4 pt-4 text-title font-extrabold">{title}</h1>
@@ -340,7 +345,7 @@ function NoteEditor({ note }: { note: Item }) {
         {mode === 'edit' && editor && <RichToolbar editor={editor} />}
       </div>
 
-      {menu && <ActionsSheet note={note} onClose={() => setMenu(false)} onDelete={() => { dirtyRef.current = false; }} />}
+      {menu && <ActionsSheet note={note} onClose={() => setMenu(false)} onDelete={() => { skipGuard.current = true; }} />}
 
       <Sheet open={ask !== null} onClose={() => void answer('keep')} label="Unsaved changes">
         <h2 className="text-heading">Save your changes?</h2>

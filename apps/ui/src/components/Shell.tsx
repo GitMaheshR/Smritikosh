@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Grid2x2, Plus, Search } from 'lucide-react';
 import { useApp } from '../store/app';
-import { NAV_GROUPS, navItem } from '../modules';
+import { NAV, NAV_GROUPS, navItem } from '../modules';
 import { BackHandler } from './BackHandler';
 import { QuickAdd, SearchBar } from './Overlays';
 import { BrandMark, Sheet } from './ui';
 import { ReminderPrompt, ToastHost } from './Feedback';
 
 const TAB_PATHS = ['/', '/tasks', '/notes'];
+// Every section that is not on the phone's bottom bar, so a new section shows up in More by itself.
+const MORE_ITEMS = NAV.filter((n) => !TAB_PATHS.includes(n.path));
 const TAGLINE = 'Your personal space to think, plan, and grow';
 
 /** Steps back in the app's own history; falls back to Home when there is nothing to go back to. */
@@ -126,11 +128,10 @@ export function Shell() {
       )}
 
       <Sheet open={more} onClose={() => setMore(false)} label="More">
-        <div className="grid grid-cols-3 gap-3">
-          {['journal', 'goals', 'settings'].map((k) => {
-            const n = navItem(k);
+        <div className="grid grid-cols-2 gap-3">
+          {MORE_ITEMS.map((n) => {
             return (
-              <button key={k} type="button" onClick={() => { setMore(false); nav(n.path); }}
+              <button key={n.key} type="button" onClick={() => { setMore(false); nav(n.path); }}
                 className="flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-tile border border-border text-meta font-bold">
                 <span className="grid h-9 w-9 place-items-center rounded-control bg-primary-soft text-primary"><n.icon size={18} aria-hidden /></span>{n.label}
               </button>

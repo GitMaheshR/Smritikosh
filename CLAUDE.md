@@ -43,8 +43,8 @@ Single user. Full plan, data model and UI spec: docs/PLAN.md — read it before 
 - Radii: cards 20, tiles 16, controls 12, pills full. Touch targets >= 44px. Visible 3px focus ring.
   Motion ~160ms, disabled under prefers-reduced-motion.
 - Layout: top bar (logo mark, name, tagline, search, + New). Sidebar card on >= 768px with Workspace (Home, Notes,
-  Tasks, Journal) and Personal (Goals, Settings) groups and an encouragement card. Phones: bottom bar Home, Tasks,
-  raised +, Notes, More (Journal, Goals, Settings). Detail screens and forms are full pages with a Back button
+  Tasks, Journal) and Personal (Goals, Places, Settings) groups and an encouragement card. Phones: bottom bar Home, Tasks,
+  raised +, Notes, More (every other section: Journal, Goals, Places, Settings). Detail screens and forms are full pages with a Back button
   (and Android Back); the bottom bar hides on them. Quick-add is a bottom sheet / command bar (Ctrl+N), search Ctrl+K.
 - Every page: teal eyebrow, big title, one-line subtitle, primary action on the right.
 - Shared components live in components/ui.tsx (PageHeader, Card, StatCard, Chip, PriorityPill, ProgressBar, Checkbox,

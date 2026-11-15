@@ -1,5 +1,6 @@
 import type { DataStore } from './datastore';
 import { lessonToItem } from './lessons';
+import { placeMeta, type PlaceInfo } from './places';
 import { toLocalIso } from './quickadd';
 import type { Item, NewItem } from './types';
 
@@ -33,11 +34,11 @@ function sampleTasks(now: Date): SampleTask[] {
   ];
 }
 
-/** Adds a small, realistic set of notes, tasks and lessons. Everything is flagged `meta.sample` so it can be removed. */
-export async function loadSampleData(store: DataStore, now: Date = new Date()): Promise<{ tasks: number; notes: number; lessons: number; goals: number }> {
-  if ((await store.listItems({ includeDeleted: false })).some((i) => isSample(i))) return { tasks: 0, notes: 0, lessons: 0, goals: 0 };
+/** Adds a small, realistic set of notes, tasks, lessons, goals and places. Everything is flagged `meta.sample` so it can be removed. */
+export async function loadSampleData(store: DataStore, now: Date = new Date()): Promise<{ tasks: number; notes: number; lessons: number; goals: number; places: number }> {
+  if ((await store.listItems({ includeDeleted: false })).some((i) => isSample(i))) return { tasks: 0, notes: 0, lessons: 0, goals: 0, places: 0 };
 
-  let tasks = 0, notes = 0, lessons = 0, goals = 0;
+  let tasks = 0, notes = 0, lessons = 0, goals = 0, places = 0;
 
   for (const t of sampleTasks(now)) {
     const { checklist, meta, status, ...rest } = t;
@@ -139,7 +140,21 @@ Invalidate on write, or set a TTL. *"There are only two hard things: cache inval
     ['Note renewal dates in Tasks', false], ['Back up the folder', false], ['Share the list with family', false],
   ]);
 
-  return { tasks, notes, lessons, goals };
+  const place = async (title: string, status: 'want' | 'visited', p: Partial<PlaceInfo>, o: { body?: string; pinned?: boolean } = {}) => {
+    await store.createItem({ type: 'place', title, status, body: o.body ?? null, pinned: o.pinned ?? false, meta: placeMeta({ sample: true }, p) });
+    places++;
+  };
+  await place('Gateway of India', 'visited', {
+    category: 'Tourist place', address: 'Apollo Bandar, Colaba, Mumbai', lat: 18.921984, lng: 72.834654, rating: 5, visitedOn: at(now, -40, 0).slice(0, 10),
+  }, { body: 'Go early in the morning, before the crowds. Ferry to Elephanta leaves from here.' });
+  await place('Shaniwar Wada', 'want', { category: 'Tourist place', address: 'Shaniwar Peth, Pune', lat: 18.519547, lng: 73.855347 },
+    { body: 'Evening light and sound show.' });
+  await place('Corner bakery near the office', 'want', { category: 'Food outlet', recommendedBy: 'Rohan' }, { body: 'Try the khari and the masala chai.' });
+  await place('Family dentist', 'visited', { category: 'Clinic', address: '2nd floor, above the pharmacy, Main Road', rating: 4, visitedOn: at(now, -90, 0).slice(0, 10) },
+    { body: 'Open 10–1 and 5–8. Closed on Sundays.', pinned: true });
+  await place('Weekend breakfast cafe', 'want', { category: 'Cafe', recommendedBy: 'Priya' }, { body: 'She says the pancakes are worth the wait.' });
+
+  return { tasks, notes, lessons, goals, places };
 }
 
 /** Moves everything flagged as sample data (and the older 500-note seed) to the trash. */

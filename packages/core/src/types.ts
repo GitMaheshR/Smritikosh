@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ITEM_TYPES = ['task', 'note', 'lesson', 'wish', 'stock', 'goal', 'weekend', 'vault_link'] as const;
+export const ITEM_TYPES = ['task', 'note', 'lesson', 'wish', 'stock', 'goal', 'weekend', 'place', 'vault_link'] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
 
 export const ItemSchema = z.object({

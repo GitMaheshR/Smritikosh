@@ -3,6 +3,7 @@ import {
   LessonIndex, NOTEBOOKS_SETTING, loadSampleData, isMilestone, milestonesOf, SearchIndex, completeTask, hasNotebook, hashPin, isBlankNote, isOpenTask,
   missedReminders, normalizeNotebookName, notebookOf, parseNotebookList, pendingReminders, removeFromList,
   renameInList, runNotesMigration, snoozeTime, toLocalIso, verifyPin, withNotebook,
+  PLACE_CATEGORIES_SETTING, hasPlaceCategory, normalizePlaceCategory, parsePlaceCategories, placeInfo, placeMeta,
   type Category, type ChecklistEntry, type DataStore, type Item, type Notifier, type ReminderEvent, type SnoozeKind, type Tag,
 } from '@smritikosh/core';
 import { createNotifier, createStore, inBulk } from '../platform';
@@ -26,6 +27,8 @@ interface AppState {
   remindersBlocked: boolean;
   /** Saved notebook names, in the user's order (notes may also use names that are not saved yet). */
   notebooks: string[];
+  /** Place categories, in the user's order (separate from task and note categories). */
+  placeCategories: string[];
   /** Notes screen state kept across navigation: search text and filter ("all", "review", "none" or "nb:<name>"). */
   notesView: { q: string; filter: string };
   pinHash: string | null;
@@ -53,6 +56,11 @@ interface AppState {
   deleteNotebook(name: string): Promise<void>;
   /** Deletes a task category; tasks that used it keep working, just without a category. Returns how many tasks changed. */
   deleteTaskCategory(id: string): Promise<number>;
+  /** Place categories: add / rename return false when the name is empty or already used. */
+  addPlaceCategory(name: string): Promise<boolean>;
+  renamePlaceCategory(from: string, to: string): Promise<boolean>;
+  /** The places keep working, just without a category. */
+  deletePlaceCategory(name: string): Promise<void>;
   openQuickAdd(v: boolean): void;
   openSearch(v: boolean): void;
   showToast(message: string, undo?: Toast['undo']): void;
@@ -78,7 +86,7 @@ export function applyTheme(t: Theme) {
 
 export const useApp = create<AppState>((set, get) => ({
   ready: false, store: null, notifier: null, items: [], tags: [], categories: [], checklist: [], search, lessons,
-  readingMode: false, remindersBlocked: false, notebooks: [], notesView: { q: '', filter: 'all' }, pinHash: null, locked: false, theme: 'system', quickAddOpen: false, searchOpen: false,
+  readingMode: false, remindersBlocked: false, notebooks: [], placeCategories: [], notesView: { q: '', filter: 'all' }, pinHash: null, locked: false, theme: 'system', quickAddOpen: false, searchOpen: false,
   prompts: [], missed: [], toast: null,
 
   async boot() {
@@ -94,7 +102,7 @@ export const useApp = create<AppState>((set, get) => ({
     await runNotesMigration(store);
     // Notes opened with "New note" but never typed into are discarded (the editor does this on exit; this covers a crash).
     for (const n of await store.listItems({ type: 'note' })) if (isBlankNote(n)) await store.deleteItem(n.id);
-    set({ notebooks: parseNotebookList(await store.getSetting(NOTEBOOKS_SETTING)) });
+    set({ notebooks: parseNotebookList(await store.getSetting(NOTEBOOKS_SETTING)), placeCategories: parsePlaceCategories(await store.getSetting(PLACE_CATEGORIES_SETTING)) });
     await get().refresh();
 
     const now = new Date();
@@ -221,6 +229,43 @@ export const useApp = create<AppState>((set, get) => ({
     await store!.deleteCategory(id);
     await get().refresh(false);
     return affected.length;
+  },
+
+  async addPlaceCategory(name) {
+    const n = normalizePlaceCategory(name);
+    const { store, placeCategories } = get();
+    if (!n || hasPlaceCategory(placeCategories, n)) return false;
+    const next = [...placeCategories, n];
+    await store!.setSetting(PLACE_CATEGORIES_SETTING, JSON.stringify(next));
+    set({ placeCategories: next });
+    return true;
+  },
+
+  async renamePlaceCategory(from, to) {
+    const n = normalizePlaceCategory(to);
+    const { store, placeCategories, items } = get();
+    const same = (a: string, b: string) => a.toLocaleLowerCase() === b.toLocaleLowerCase();
+    if (!n || placeCategories.some((c) => same(c, n) && !same(c, from))) return false;
+    const next = hasPlaceCategory(placeCategories, from) ? placeCategories.map((c) => (same(c, from) ? n : c)) : [...placeCategories, n];
+    await store!.setSetting(PLACE_CATEGORIES_SETTING, JSON.stringify(next));
+    for (const i of items.filter((x) => x.type === 'place' && same(placeInfo(x).category ?? '', from))) {
+      await store!.updateItem(i.id, { meta: placeMeta(i.meta, { category: n }) });
+    }
+    set({ placeCategories: next });
+    await get().refresh(false);
+    return true;
+  },
+
+  async deletePlaceCategory(name) {
+    const { store, placeCategories, items } = get();
+    const same = (a: string, b: string) => a.toLocaleLowerCase() === b.toLocaleLowerCase();
+    const next = placeCategories.filter((c) => !same(c, name));
+    await store!.setSetting(PLACE_CATEGORIES_SETTING, JSON.stringify(next));
+    for (const i of items.filter((x) => x.type === 'place' && same(placeInfo(x).category ?? '', name))) {
+      await store!.updateItem(i.id, { meta: placeMeta(i.meta, { category: null }) });
+    }
+    set({ placeCategories: next });
+    await get().refresh(false);
   },
 
   openQuickAdd: (v) => set({ quickAddOpen: v, searchOpen: false }),

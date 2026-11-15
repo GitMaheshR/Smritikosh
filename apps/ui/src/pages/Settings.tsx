@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
-import { isValidPin, listNotebooks, loadSampleData, removeSampleData } from '@smritikosh/core';
+import { isValidPin, listNotebooks, listPlaceCategories, loadSampleData, removeSampleData } from '@smritikosh/core';
 import { useApp } from '../store/app';
 import { Card, Chip, PageHeader } from '../components/ui';
 import { platformName } from '../platform';
@@ -124,7 +124,7 @@ function SampleDataCard() {
   }
   const addEveryday = () => run(async () => {
     const r = await loadSampleData(store!);
-    return `Added ${r.tasks} tasks, ${r.notes} notes, ${r.lessons} journal entries, ${r.goals} goals`;
+    return `Added ${r.tasks} tasks, ${r.notes} notes, ${r.lessons} journal entries, ${r.goals} goals, ${r.places} places`;
   });
   async function remove() {
     if (!window.confirm('Remove all sample tasks, notes, journal entries and goals? Your own items are not touched.')) return;
@@ -138,7 +138,7 @@ function SampleDataCard() {
       </p>
       <div className="flex flex-wrap gap-2">
         <button type="button" disabled={busy || hasEveryday} onClick={() => void addEveryday()} className="btn btn-primary disabled:opacity-50">
-          {hasEveryday ? 'Everyday sample loaded' : 'Add tasks, notes, journal and goals'}
+          {hasEveryday ? 'Everyday sample loaded' : 'Add tasks, notes, journal, goals and places'}
         </button>
         {hasEveryday && <button type="button" disabled={busy} onClick={() => void remove()} className="btn">Remove sample data</button>}
       </div>
@@ -222,6 +222,23 @@ function NoteCategoriesCard() {
   );
 }
 
+function PlaceCategoriesCard() {
+  const { items, placeCategories, addPlaceCategory, renamePlaceCategory, deletePlaceCategory, showToast } = useApp();
+  const rows = listPlaceCategories(items, placeCategories).map((c) => ({ key: c.name, name: c.name, count: c.count }));
+  return (
+    <CategoryManager title="Place categories" noun="place" rows={rows}
+      intro="The Category list for places, such as Restaurant or Clinic. Separate from task and note categories."
+      onAdd={async (n) => ((await addPlaceCategory(n)) ? null : 'You already have a place category with that name')}
+      onRename={async (r, n) => ((await renamePlaceCategory(r.name, n)) ? null : 'You already have a place category with that name')}
+      onDelete={async (r) => {
+        const msg = r.count ? `Delete "${r.name}"? Its ${plural(r.count, 'place')} will be kept, just without a category.` : `Delete "${r.name}"?`;
+        if (!window.confirm(msg)) return;
+        await deletePlaceCategory(r.name);
+        showToast(`Deleted "${r.name}"`);
+      }} />
+  );
+}
+
 export function SettingsPage() {
   return (
     <div>
@@ -237,6 +254,7 @@ export function SettingsPage() {
         <div className="space-y-4">
           <TaskCategoriesCard />
           <NoteCategoriesCard />
+          <PlaceCategoriesCard />
           <Card title="About your data">
             <p className="text-body text-muted">Everything stays on this device. Nothing is sent anywhere, and the app works without internet. Export and backup tools are planned.</p>
             <p className="num mt-3 text-meta text-faint">Smritikosh 0.1.0 · running on {platformName()}</p>

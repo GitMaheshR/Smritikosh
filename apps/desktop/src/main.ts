@@ -1,11 +1,11 @@
-import { app, BrowserWindow, ipcMain, Menu, nativeImage, Notification, Tray } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, nativeImage, Notification, shell, Tray } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { promisify } from 'node:util';
 import { DatabaseSync } from 'node:sqlite';
-import { SqlStore, type SqlDriver } from '@smritikosh/core';
+import { SqlStore, isGoogleMapsUrl, type SqlDriver } from '@smritikosh/core';
 import { APP_ICON_DATA_URL, TRAY_ICON_DATA_URL } from './trayIcon';
 
 let store: SqlStore;
@@ -129,6 +129,11 @@ if (!app.requestSingleInstanceLock()) {
       return (store as unknown as Record<string, (...a: unknown[]) => unknown>)[method]!(...(args ?? []));
     });
     ipcMain.handle('device:id', () => machineId());
+    // The one way out of the app: a Google Maps web link, opened in the person's browser. Nothing else is allowed.
+    ipcMain.handle('open:external', async (_e, url: unknown) => {
+      if (typeof url !== 'string' || !isGoogleMapsUrl(url)) throw new Error('Only Google Maps links can be opened.');
+      await shell.openExternal(new URL(url).toString());
+    });
     ipcMain.handle('notifier:permission', () => Notification.isSupported());
     ipcMain.handle('notifier:reschedule', (_e, entries: { id: string; title: string; at: string }[]) => {
       const next = new Map<string, Reminder>();

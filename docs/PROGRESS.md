@@ -320,3 +320,24 @@ Data: Windows `%APPDATA%\Smritikosh\smritikosh.db`.
 - **Removed:** the Java and database sample notes (`study.ts`) and their Settings button; the old markdown reader (`Markdown.tsx`, `markdown.ts`) and the `dompurify` and `highlight.js` packages. "Remove sample data" still removes study notes that were already loaded.
 - **Keyboard mic:** voice typing on the Google keyboard works in the editor and the Title field; nothing was built for it.
 - Known: the UI bundle grew by about 360 KB (editor). Not tested on a phone yet.
+
+### Places (2026-11-15)
+- **What:** a Places section (sidebar under Personal; More on phones) for restaurants, cafes, clinics, sights and friends' tips. Each place has a name, category,
+  Want to visit / Visited, favourite, address or area, phone, recommended by, rating (1-5), last visited date and notes. List with search, category and
+  status filters (favourites first); read-only place page with Edit; form at `/places/new` and `/places/:id/edit`. Quick add (Ctrl+N) and search include places.
+- **Location, offline:** paste a Google Maps link (coordinates are read from it; the dropped pin `!3d…!4d…` wins over the map centre `@…`), paste or type
+  "lat, lng", or tap **Use my location** (Android GPS, asked only when tapped). Short `maps.app.goo.gl` links are kept but cannot be read offline; the form says
+  how to copy the exact numbers instead.
+- **Leaving the app:** Open in Google Maps, Directions, Call (Android) and Share. The app only hands the link to the system; it never contacts a map
+  service. Desktop opens Google Maps links in the browser through one IPC call (`open:external`) that checks the link again in the main process; all other
+  navigation stays blocked. GPS is not offered on Windows, because the browser's location would ask Google over the network.
+- **Data:** items of type `place` (`packages/core/src/places.ts`, 18 tests): title = name, body = notes, status = want/visited, pinned = favourite, the rest
+  in flat `meta` keys so search indexes them. Place categories are their own list in settings (`place_categories`), starting with Restaurant, Cafe,
+  Food outlet, Mall, Shop, Tourist place, Clinic, Hospital, Friend's recommendation, Other; managed in Settings. No database migration.
+- **Android:** new plugins `@capacitor/geolocation` and `@capacitor/app-launcher`; manifest adds location permissions (GPS not required) and `<queries>`
+  for opening links and the dialer. Needs a new APK.
+- **Sample data:** five sample places (two with coordinates, one favourite).
+- **Not tested:** GPS, opening Google Maps and calling on a phone; opening the browser from the Windows app. Tested in the browser preview: list, filters,
+  place page, Mark visited, link parsing, short-link and bad-coordinate messages, phone width, search.
+- **Release key:** the APK is now signed with a new key (the old password was forgotten); certificate SHA-256 `a915bfcb…7dd8`. Phones with the old build
+  must uninstall first and need a new activation code.

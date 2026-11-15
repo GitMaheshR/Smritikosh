@@ -27,10 +27,10 @@ export function Shell() {
 
   // Back arrow on detail screens everywhere, and on screens reached through "More" on phones.
   const hasHistory = !!(window.history.state as { idx?: number } | null)?.idx;
-  const nested = /^\/(notes|tasks|journal|goals)\/./.test(loc.pathname) || loc.pathname.startsWith('/dev');
+  const nested = /^\/(notes|tasks|journal|goals|places)\/./.test(loc.pathname) || loc.pathname.startsWith('/dev');
   const showBack = hasHistory && (nested || !TAB_PATHS.includes(loc.pathname));
   // A note, task form or goal uses the whole phone screen: no bottom bar.
-  const fullScreen = /^\/(notes|tasks|journal|goals)\/./.test(loc.pathname);
+  const fullScreen = /^\/(notes|tasks|journal|goals|places)\/./.test(loc.pathname);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ListChecks, NotebookPen, PenLine, Target, type LucideIcon } from 'lucide-react';
+import { ListChecks, MapPin, NotebookPen, PenLine, Target, type LucideIcon } from 'lucide-react';
 import { isBlankNote, isMilestone, lessonToItem, parseQuickAdd, type Item, type ItemType } from '@smritikosh/core';
 import { useApp } from '../store/app';
 import { Chip, CommandBar } from './ui';
 
-type Kind = 'task' | 'note' | 'lesson' | 'goal';
+type Kind = 'task' | 'note' | 'lesson' | 'goal' | 'place';
 const KINDS: { type: Kind; label: string; icon: LucideIcon; path: string; full: string }[] = [
   { type: 'task', label: 'Task', icon: ListChecks, path: '/tasks', full: '/tasks/new' },
   { type: 'note', label: 'Note', icon: NotebookPen, path: '/notes', full: '/notes' },
   { type: 'lesson', label: 'Journal', icon: PenLine, path: '/journal', full: '/journal/new' },
   { type: 'goal', label: 'Goal', icon: Target, path: '/goals', full: '/goals/new' },
+  { type: 'place', label: 'Place', icon: MapPin, path: '/places', full: '/places/new' },
 ];
 const isKind = (t: ItemType): t is Kind => KINDS.some((k) => k.type === t);
 
@@ -34,6 +35,13 @@ export function QuickAdd() {
       await refresh(false);
       close();
       return nav(`/journal/${it.id}`);
+    }
+    if (type === 'place') {
+      // A place is saved by name; the form opens straight away for the location and the rest.
+      const it = await store.createItem({ type, title: parsed.title, status: 'want' });
+      await refresh(false);
+      close();
+      return nav(`/places/${it.id}/edit`);
     }
     if (type === 'goal') {
       const it = await store.createItem({ type, title: parsed.title, status: 'active', due_at: parsed.due_at?.slice(0, 10) ?? null });
@@ -90,6 +98,7 @@ export function QuickAdd() {
 
 const GROUPS: { type: ItemType; label: string }[] = [
   { type: 'task', label: 'Tasks' }, { type: 'note', label: 'Notes' }, { type: 'lesson', label: 'Journal' }, { type: 'goal', label: 'Goals' },
+  { type: 'place', label: 'Places' },
 ];
 
 export function SearchBar() {
@@ -109,12 +118,13 @@ export function SearchBar() {
     if (it.type === 'task') nav(`/tasks/${it.id}`);
     else if (it.type === 'note') nav(`/notes/${it.id}`);
     else if (it.type === 'lesson') nav(`/journal/${it.id}`);
+    else if (it.type === 'place') nav(`/places/${it.id}`);
     else if (it.type === 'goal') nav(`/goals/${isMilestone(it) && it.parent_id ? it.parent_id : it.id}`);
   };
 
   return (
     <CommandBar open={searchOpen} onClose={close} label="Search">
-      <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search tasks, notes, journal, goals…" aria-label="Search" className="input" />
+      <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search tasks, notes, journal, goals, places…" aria-label="Search" className="input" />
       <div className="mt-3 max-h-[50vh] overflow-y-auto">
         {q.trim() && groups.length === 0 && <p className="py-6 text-center text-body text-muted">Nothing found.</p>}
         {groups.map((g) => (

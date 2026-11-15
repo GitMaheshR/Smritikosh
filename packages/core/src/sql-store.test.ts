@@ -52,7 +52,7 @@ describe('SqlStore (the real SQL used on the phone and PC)', () => {
     const { store } = sqlStore();
     await store.init();
     await loadSampleData(store, NOW);
-    expect(await removeSampleData(store)).toBe(36);
+    expect(await removeSampleData(store)).toBe(41);
     expect(await store.listItems()).toHaveLength(0);
   });
 

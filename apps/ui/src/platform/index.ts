@@ -1,11 +1,11 @@
-import { MemoryStore, SqlStore, type DataStore, type Notifier, type SqlDriver } from '@smritikosh/core';
+import { MemoryStore, SqlStore, isAllowedExternalUrl, type DataStore, type Notifier, type SqlDriver } from '@smritikosh/core';
 import { requireUnlocked } from '../license/session';
 import { androidNotifier, desktopNotifier, webNotifier, type DesktopBridge } from './notifier';
 
 declare global {
   interface Window {
     /** Exposed by apps/desktop preload (contextBridge). */
-    smritikosh?: { invoke(method: string, ...args: unknown[]): Promise<unknown>; platform: 'desktop'; notifier: DesktopBridge; device: { getId(): Promise<string> } };
+    smritikosh?: { invoke(method: string, ...args: unknown[]): Promise<unknown>; platform: 'desktop'; notifier: DesktopBridge; device: { getId(): Promise<string> }; openExternal(url: string): Promise<void> };
     Capacitor?: { isNativePlatform(): boolean };
   }
 }
@@ -77,6 +77,61 @@ export async function onHardwareBack(handler: () => boolean): Promise<() => void
 /** Runs many writes as one transaction where the platform supports it (Android); elsewhere just runs them. */
 export function inBulk<T>(store: DataStore, fn: () => Promise<T>): Promise<T> {
   return store instanceof SqlStore && store.bulk ? store.bulk(fn) : fn();
+}
+
+// ---- Places: map links, calls, GPS -------------------------------------------------------------
+// The app never talks to a map service. It only hands a Google Maps link (or a phone number) to the system, which opens
+// Google Maps, the browser or the dialer. GPS works without internet on the phone; on Windows the browser's location
+// would ask Google over the network, so it is not offered there.
+
+export const canUseLocation = () => platformName() === 'android';
+export const canCall = () => platformName() === 'android';
+
+/** Opens a Google Maps link or `tel:` number outside the app. Anything else is refused. */
+export async function openExternal(url: string): Promise<void> {
+  if (!isAllowedExternalUrl(url)) throw new Error('That link cannot be opened.');
+  const p = platformName();
+  if (p === 'desktop') return window.smritikosh!.openExternal(url);
+  if (p === 'android') {
+    const { AppLauncher } = await import('@capacitor/app-launcher');
+    const r = await AppLauncher.openUrl({ url });
+    if (!r.completed) throw new Error('No app could open that link.');
+    return;
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+export interface Fix { lat: number; lng: number; accuracy: number }
+
+/** The phone's current position from GPS. Throws an Error with a message fit to show the person. */
+export async function currentLocation(): Promise<Fix> {
+  if (!canUseLocation()) throw new Error('Current location is available in the Android app.');
+  const { Geolocation } = await import('@capacitor/geolocation');
+  let perm;
+  try {
+    perm = await Geolocation.checkPermissions();
+    if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') perm = await Geolocation.requestPermissions({ permissions: ['location', 'coarseLocation'] });
+  } catch {
+    throw new Error('Location is switched off. Turn on Location in the phone settings and try again.');
+  }
+  if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') throw new Error('Smritikosh is not allowed to use your location. You can allow it in the phone settings.');
+  try {
+    const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 30_000, maximumAge: 30_000 });
+    return { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+  } catch {
+    throw new Error('Could not find your location. Step outside or near a window and try again.');
+  }
+}
+
+/** Shares text through Android's share sheet; elsewhere copies it. Returns what happened. */
+export async function shareText(title: string, text: string): Promise<'shared' | 'copied'> {
+  if (platformName() === 'android') {
+    const { Share } = await import('@capacitor/share');
+    await Share.share({ title, text, dialogTitle: `Share ${title}` });
+    return 'shared';
+  }
+  await navigator.clipboard.writeText(text);
+  return 'copied';
 }
 
 export async function createNotifier(): Promise<Notifier> {

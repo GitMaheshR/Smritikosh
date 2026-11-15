@@ -11,6 +11,7 @@ import { TaskDetail } from './pages/TaskDetail';
 import { NotesPage } from './pages/Notes';
 import { JournalForm, JournalPage } from './pages/Journal';
 import { GoalForm, GoalsPage } from './pages/Goals';
+import { PlaceDetail, PlaceForm, PlacesPage } from './pages/Places';
 import { SettingsPage } from './pages/Settings';
 import { DevSeed } from './pages/DevSeed';
 import { DevComponents } from './pages/DevComponents';
@@ -32,6 +33,10 @@ const router = createHashRouter(
       <Route path="/goals" element={<GoalsPage />} />
       <Route path="/goals/new" element={<GoalForm />} />
       <Route path="/goals/:id" element={<GoalForm />} />
+      <Route path="/places" element={<PlacesPage />} />
+      <Route path="/places/new" element={<PlaceForm />} />
+      <Route path="/places/:id" element={<PlaceDetail />} />
+      <Route path="/places/:id/edit" element={<PlaceForm />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/dev/seed" element={<DevSeed />} />
       <Route path="/dev/components" element={<DevComponents />} />

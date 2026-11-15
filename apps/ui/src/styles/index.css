@@ -6,6 +6,13 @@
 @layer base {
   html { font-size: 100%; }
   body { @apply bg-bg font-sans text-body text-text antialiased; -webkit-tap-highlight-color: transparent; }
+  /* iPhone: keep content clear of the notch, the rounded corners and the home bar (all zero on Android and PC). */
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
   *:focus-visible { outline: 3px solid rgb(var(--c-focus)); outline-offset: 2px; }
   .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
   button { @apply min-h-touch; }

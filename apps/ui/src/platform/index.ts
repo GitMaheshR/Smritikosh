@@ -1,20 +1,20 @@
 import { MemoryStore, SqlStore, isAllowedExternalUrl, type DataStore, type Notifier, type SqlDriver } from '@smritikosh/core';
 import { requireUnlocked } from '../license/session';
-import { androidNotifier, desktopNotifier, webNotifier, type DesktopBridge } from './notifier';
+import { desktopNotifier, phoneNotifier, webNotifier, type DesktopBridge } from './notifier';
 
 declare global {
   interface Window {
     /** Exposed by apps/desktop preload (contextBridge). */
     smritikosh?: { invoke(method: string, ...args: unknown[]): Promise<unknown>; platform: 'desktop'; notifier: DesktopBridge; device: { getId(): Promise<string> }; openExternal(url: string): Promise<void> };
-    Capacitor?: { isNativePlatform(): boolean };
+    Capacitor?: { isNativePlatform(): boolean; getPlatform(): string };
   }
 }
 
-export type PlatformName = 'desktop' | 'android' | 'web';
+export type PlatformName = 'desktop' | 'android' | 'ios' | 'web';
 
 export function platformName(): PlatformName {
   if (window.smritikosh) return 'desktop';
-  if (window.Capacitor?.isNativePlatform()) return 'android';
+  if (window.Capacitor?.isNativePlatform()) return window.Capacitor.getPlatform() === 'ios' ? 'ios' : 'android';
   return 'web';
 }
 
@@ -65,6 +65,9 @@ async function capacitorStore(): Promise<DataStore> {
  * Android hardware/gesture Back. `handler` returns true when it dealt with the press (closed a sheet, went back a
  * screen); returning false at the start of the app lets Android leave the app. No-op on desktop and in the browser.
  */
+/** The phone apps (Android and iPhone), which share the Capacitor plugins. */
+export const isPhoneApp = () => { const p = platformName(); return p === 'android' || p === 'ios'; };
+
 export async function onHardwareBack(handler: () => boolean): Promise<() => void> {
   if (platformName() !== 'android') return () => {};
   const { App } = await import('@capacitor/app');
@@ -84,15 +87,15 @@ export function inBulk<T>(store: DataStore, fn: () => Promise<T>): Promise<T> {
 // Google Maps, the browser or the dialer. GPS works without internet on the phone; on Windows the browser's location
 // would ask Google over the network, so it is not offered there.
 
-export const canUseLocation = () => platformName() === 'android';
-export const canCall = () => platformName() === 'android';
+export const canUseLocation = () => isPhoneApp();
+export const canCall = () => isPhoneApp();
 
 /** Opens a Google Maps link or `tel:` number outside the app. Anything else is refused. */
 export async function openExternal(url: string): Promise<void> {
   if (!isAllowedExternalUrl(url)) throw new Error('That link cannot be opened.');
   const p = platformName();
   if (p === 'desktop') return window.smritikosh!.openExternal(url);
-  if (p === 'android') {
+  if (p === 'android' || p === 'ios') {
     const { AppLauncher } = await import('@capacitor/app-launcher');
     const r = await AppLauncher.openUrl({ url });
     if (!r.completed) throw new Error('No app could open that link.');
@@ -105,7 +108,7 @@ export interface Fix { lat: number; lng: number; accuracy: number }
 
 /** The phone's current position from GPS. Throws an Error with a message fit to show the person. */
 export async function currentLocation(): Promise<Fix> {
-  if (!canUseLocation()) throw new Error('Current location is available in the Android app.');
+  if (!canUseLocation()) throw new Error('Current location is available in the phone app.');
   const { Geolocation } = await import('@capacitor/geolocation');
   let perm;
   try {
@@ -125,7 +128,7 @@ export async function currentLocation(): Promise<Fix> {
 
 /** Shares text through Android's share sheet; elsewhere copies it. Returns what happened. */
 export async function shareText(title: string, text: string): Promise<'shared' | 'copied'> {
-  if (platformName() === 'android') {
+  if (isPhoneApp()) {
     const { Share } = await import('@capacitor/share');
     await Share.share({ title, text, dialogTitle: `Share ${title}` });
     return 'shared';
@@ -136,13 +139,13 @@ export async function shareText(title: string, text: string): Promise<'shared' |
 
 export async function createNotifier(): Promise<Notifier> {
   const p = platformName();
-  return p === 'desktop' ? desktopNotifier(window.smritikosh!.notifier) : p === 'android' ? androidNotifier() : webNotifier();
+  return p === 'desktop' ? desktopNotifier(window.smritikosh!.notifier) : p === 'android' || p === 'ios' ? phoneNotifier() : webNotifier();
 }
 
 export async function createStore(): Promise<DataStore> {
   requireUnlocked(); // the database only opens after this device has been activated
   const p = platformName();
-  const store = p === 'desktop' ? electronStore() : p === 'android' ? await capacitorStore() : new MemoryStore();
+  const store = p === 'desktop' ? electronStore() : p === 'android' || p === 'ios' ? await capacitorStore() : new MemoryStore();
   await store.init();
   return store;
 }

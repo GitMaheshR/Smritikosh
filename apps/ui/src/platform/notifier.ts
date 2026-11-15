@@ -18,14 +18,15 @@ export function desktopNotifier(b: DesktopBridge): Notifier {
   };
 }
 
-/** Stable positive 31-bit int id for Android notification ids. */
+/** Stable positive 31-bit int id for phone notification ids. */
 const numId = (s: string) => {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
   return Math.abs(h) || 1;
 };
 
-export async function androidNotifier(): Promise<Notifier> {
+/** Android and iPhone: reminders are handed to the phone, so they ring with the app closed. */
+export async function phoneNotifier(): Promise<Notifier> {
   const { LocalNotifications } = await import('@capacitor/local-notifications');
   const handlers = new Set<(e: ReminderEvent) => void>();
   const idMap = new Map<number, string>();
@@ -65,14 +66,16 @@ export async function androidNotifier(): Promise<Notifier> {
         if (ex.exact_alarm !== 'granted') ex = await LocalNotifications.changeExactNotificationSetting();
         return ex.exact_alarm === 'granted';
       } catch {
-        return true; // older Android: no exact-alarm gate
+        return true; // iPhone and older Android: no exact-alarm setting
       }
     },
     async rescheduleAll(entries) {
       const pending = await LocalNotifications.getPending();
       if (pending.notifications.length) await LocalNotifications.cancel({ notifications: pending.notifications });
       idMap.clear();
-      const list = entries.slice(0, 60); // Android caps scheduled alarms; the rest are re-added as time passes
+      // The nearest 60 only: iPhone keeps at most 64 and Android caps alarms too. The rest are added as these fire,
+      // because every change and every app start books the list again from the data.
+      const list = [...entries].sort((a, b) => a.at.localeCompare(b.at)).slice(0, 60);
       if (list.length === 0) return;
       for (const e of list) idMap.set(numId(e.id), e.id);
       await LocalNotifications.schedule({

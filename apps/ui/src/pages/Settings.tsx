@@ -36,7 +36,9 @@ function NotificationsCard() {
       <p className="mb-3 text-body text-muted">
         {platformName() === 'desktop'
           ? 'Closing the window keeps Smritikosh running in the system tray so reminders still fire. Use Quit in the tray menu to stop it.'
-          : 'Reminders use exact alarms so they fire on time, even with the app closed.'}
+          : platformName() === 'ios'
+            ? 'Reminders are handed to the iPhone, so they ring on time even with the app closed. The nearest 60 are booked at a time; the rest follow as these ring.'
+            : 'Reminders use exact alarms so they fire on time, even with the app closed.'}
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className="btn" onClick={async () => { const ok = await notifier?.requestPermission().catch(() => false); await refresh(); setPerm(ok && !useApp.getState().remindersBlocked ? 'Reminders are allowed.' : 'Not allowed yet. Turn on notifications (and exact alarms) for Smritikosh in your phone settings, then tap this again.'); }}>Check permissions</button>

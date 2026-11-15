@@ -29,8 +29,9 @@ or after a factory reset. A new code is then needed. Windows uses the machine's 
 - **Tamper check (Android release):** the release carries the SHA-256 fingerprint of the signing certificate; native code (`IntegrityCheck.java`) compares it at start,
   and the activation screen asks again through a second plugin call. A copy re-signed with another key shows "This copy has been modified" and closes.
 - **Scrambled licence code:** `src/license/*.ts` and `packages/core/src/license.ts` are obfuscated in production builds (`apps/ui/obfuscate-license.ts`).
-- **Release hardening:** not debuggable, Android backup off, clear-text traffic off, no internet permission, screenshots and screen recording blocked and a blank
-  recent-apps card (release builds only; debug builds can still be captured for testing).
+- **Release hardening:** not debuggable, Android backup off, clear-text traffic off, no internet permission.
+  Screenshots and screen recording are allowed (the blocking was removed on 2026-11-15 at the owner's request), so the
+  recent-apps screen shows the last page.
 
 ## Building the signed APK
 ```bash

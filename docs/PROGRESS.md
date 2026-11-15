@@ -341,3 +341,22 @@ Data: Windows `%APPDATA%\Smritikosh\smritikosh.db`.
   place page, Mark visited, link parsing, short-link and bad-coordinate messages, phone width, search.
 - **Release key:** the APK is now signed with a new key (the old password was forgotten); certificate SHA-256 `a915bfcb…7dd8`. Phones with the old build
   must uninstall first and need a new activation code.
+
+### Screenshots allowed, Places in More (2026-11-15)
+- **Screenshots:** the release APK no longer blocks screenshots and screen recording (`FLAG_SECURE` removed from `MainActivity.java`). The recent-apps
+  screen now shows the last page, so anything open there can be seen by someone holding the phone.
+- **More menu:** lists every section that is not on the bottom bar (Journal, Goals, Places, Settings).
+- **Tested on the phone (moto g82):** Places page, Open in Google Maps, Directions, Use my location, Call, Share, a reminder ringing on time with
+  the app in the background and its Done button.
+
+### iPhone version (2026-11-15, not yet built)
+- **Project:** Capacitor iOS platform added (`apps/mobile/ios`, bundle ID `app.smritikosh.mobile`, iOS 13+). Same screens and plugins as
+  Android. `pnpm --filter @smritikosh/mobile sync:ios` builds the screens and copies them in.
+- **App changes:** the platform layer knows `ios` (`platformName()`, `isPhoneApp()`); reminders, database, GPS, Share, Maps and Call use
+  the same plugins on both phones. The Android tamper check is skipped on iPhone. Reminders book the nearest 60 (iPhone keeps at most 64).
+  The page keeps clear of the notch and home bar (`env(safe-area-inset-*)` on `body`, zero on Android and PC).
+- **iPhone settings:** location permission message, `tel` query, no export-compliance question (`ITSAppUsesNonExemptEncryption` false).
+  App icon (1024 px, no transparency) and launch screen rendered by `pnpm icons` (big images are captured in 512 px tiles).
+- **Cloud build:** `.github/workflows/ios.yml` on a GitHub Mac, started by hand. Unsigned check needs no Apple account; the TestFlight run
+  signs with Apple cloud signing using an App Store Connect API key kept in GitHub secrets. Owner steps: `docs/IPHONE.md`.
+- **Not tested:** nothing has been built or run for iPhone yet (no Mac here). The first unsigned cloud run is the first real check.

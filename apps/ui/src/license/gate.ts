@@ -20,9 +20,9 @@ interface Saved { code: string; issued: string; expires: string | null }
 
 const Integrity = registerPlugin<{ check(): Promise<{ genuine: boolean }> }>('Integrity');
 
-/** Second, independent copy check (the native code also checks at start). Android only. */
+/** Second, independent copy check (the native code also checks at start). Android only: on iPhone, Apple checks the signature itself. */
 async function copyIsGenuine(): Promise<boolean> {
-  if (!Capacitor.isNativePlatform()) return true;
+  if (Capacitor.getPlatform() !== 'android') return true;
   try {
     return (await Integrity.check()).genuine === true;
   } catch {

@@ -20,7 +20,7 @@ Single user. Full plan, data model and UI spec: docs/PLAN.md — read it before 
 - apps/ui: React 18 + Vite + Tailwind + shadcn/ui + Zustand + React Hook Form + React Router (hash router).
 - apps/desktop: Electron. better-sqlite3 in the MAIN process only; renderer talks via a typed
   contextBridge IPC API. contextIsolation on, nodeIntegration off, sandbox on. electron-builder -> NSIS installer.
-- apps/mobile: Capacitor (Android). @capacitor-community/sqlite, @capacitor/local-notifications,
+- apps/mobile: Capacitor (Android, and iPhone built in the cloud: see docs/IPHONE.md). @capacitor-community/sqlite, @capacitor/local-notifications,
   @capacitor/filesystem, @capacitor/preferences, a biometric plugin for fingerprint unlock.
 - A DataStore interface in core with two adapters (electron-ipc, capacitor-sqlite). UI code only
   ever uses DataStore and a Notifier interface — never platform APIs directly.

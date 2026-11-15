@@ -1,0 +1,117 @@
+# iPhone build on a GitHub-hosted Mac. Started by hand only (Actions tab -> iPhone build -> Run workflow),
+# because Mac minutes are expensive. See docs/IPHONE.md for the one-time Apple setup.
+#
+#   testflight = false : checks that the iPhone app builds. Unsigned; needs no Apple account.
+#   testflight = true  : builds, signs (Apple cloud signing) and uploads to TestFlight. Needs the four secrets below.
+#
+# Secrets (repository Settings -> Secrets and variables -> Actions), all from App Store Connect / the developer account:
+#   APPLE_TEAM_ID          10-character Team ID
+#   ASC_KEY_ID             App Store Connect API key ID (key with the Admin role, so it may create signing certificates)
+#   ASC_ISSUER_ID          Issuer ID shown above the keys list
+#   ASC_PRIVATE_KEY        the whole text of the downloaded AuthKey_XXXX.p8 file
+name: iPhone build
+
+on:
+  workflow_dispatch:
+    inputs:
+      testflight:
+        description: Sign and upload to TestFlight
+        type: boolean
+        default: false
+      sample_data:
+        description: Open with sample data on first launch
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-build
+  cancel-in-progress: false
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'   # the Windows app is not built here
+      VITE_SEED_SAMPLE: ${{ inputs.sample_data && '1' || '' }}
+      APP_VERSION: '0.1.0'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4        # version from "packageManager" in package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install packages
+        run: pnpm install --frozen-lockfile
+
+      - name: Tests
+        run: pnpm --filter @smritikosh/core test
+
+      - name: Build the app screens and copy them into the iPhone project
+        run: pnpm --filter @smritikosh/mobile sync:ios
+
+      - name: Build (unsigned check)
+        if: ${{ !inputs.testflight }}
+        working-directory: apps/mobile/ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            MARKETING_VERSION="$APP_VERSION" CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            CODE_SIGNING_ALLOWED=NO -quiet build
+
+      - name: Write the App Store Connect key
+        if: ${{ inputs.testflight }}
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          test -n "$ASC_PRIVATE_KEY" || { echo "::error::Secrets are missing. See docs/IPHONE.md"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/asc"
+          printf '%s\n' "$ASC_PRIVATE_KEY" > "$RUNNER_TEMP/asc/key.p8"
+          chmod 600 "$RUNNER_TEMP/asc/key.p8"
+
+      - name: Archive (signed by Apple cloud signing)
+        if: ${{ inputs.testflight }}
+        working-directory: apps/mobile/ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Smritikosh.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/key.p8" \
+            -authenticationKeyID "${{ secrets.ASC_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.ASC_ISSUER_ID }}" \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" CODE_SIGN_STYLE=Automatic \
+            MARKETING_VERSION="$APP_VERSION" CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            -quiet archive
+
+      - name: Upload to TestFlight
+        if: ${{ inputs.testflight }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Smritikosh.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/key.p8" \
+            -authenticationKeyID "${{ secrets.ASC_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.ASC_ISSUER_ID }}"
+          echo "Uploaded build ${{ github.run_number }} (version $APP_VERSION). It shows in TestFlight after Apple finishes processing (usually 5-30 minutes)."
+
+      - name: Remove the key
+        if: ${{ always() }}
+        run: rm -rf "$RUNNER_TEMP/asc"
